@@ -1,0 +1,118 @@
+# Training configuration
+training:
+  num_epochs: 15
+  batch_size: 8
+  num_workers: 2
+  learning_rate: 0.0001
+  weight_decay: 0.001
+  label_smoothing: 0.1
+  aggressive_aug_threshold: 999999
+  accumulate_grad_batches: 4
+  scheduler: "cosine"  # cosine, step, plateau
+  optimizer: "adamw"   # adamw, sgd
+  seed: 42
+
+# Model configuration
+model:
+  preset: "i3d_r50"  # i3d_r50, x3d_xs, x3d_s, x3d_m, x3d_l, slowfast_r50
+
+# Model presets
+model_presets:
+  i3d_r50:
+    name: "i3d_r50"
+    pretrained: false
+    weights_path: "models/3d-cnn/I3D_8x8_R50.pyth"
+    freeze_backbone: true
+    dropout: 0.5
+    batch_size: 4
+    accumulate_grad_batches: 4
+
+  x3d_xs:
+    name: "x3d_xs"
+    pretrained: false
+    weights_path: "models/3d-cnn/X3D_XS.pyth"
+    freeze_backbone: true
+    dropout: 0.5
+    batch_size: 16
+    accumulate_grad_batches: 2
+
+  x3d_s:
+    name: "x3d_s"
+    pretrained: false
+    weights_path: "models/3d-cnn/X3D_S.pyth"
+    freeze_backbone: true
+    dropout: 0.5
+    batch_size: 8
+    accumulate_grad_batches: 4
+
+  x3d_m:
+    name: "x3d_m"
+    pretrained: false
+    weights_path: "models/3d-cnn/X3D_M.pyth"
+    freeze_backbone: true
+    dropout: 0.5
+    batch_size: 4
+    accumulate_grad_batches: 8
+
+  x3d_l:
+    name: "x3d_l"
+    pretrained: false
+    weights_path: "models/3d-cnn/X3D_L.pyth"
+    freeze_backbone: true
+    dropout: 0.5
+    batch_size: 2
+    accumulate_grad_batches: 16
+
+  slowfast_r50:
+    name: "slowfast_r50"
+    pretrained: false
+    weights_path: "models/3d-cnn/SLOWFAST_8x8_R50.pyth"
+    freeze_backbone: true
+    dropout: 0.5
+    batch_size: 4
+    accumulate_grad_batches: 8
+
+# Data configuration
+data:
+  video_frame_size: 224
+  video_max_frames: 32
+
+# Paths
+paths:
+  dataset: "data/dataset"
+  annotations_all: "data/dataset/annotations_all.csv"
+  annotations_train: "data/dataset/annotations_train.csv"
+  annotations_val: "data/dataset/annotations_val.csv"
+  annotations_test: "data/dataset/annotations_test.csv"
+  id2label: "data/dataset/id2label.json"
+  train_lmdb: "D:/Projects/actions-data/train_lmdb"
+  val_lmdb: "D:/Projects/actions-data/val_lmdb"
+  test_lmdb: "D:/Projects/actions-data/test_lmdb"
+  output_dir: "runs/model=I3D-8x8-R50"
+  checkpoint: "runs/model=I3D-8x8-R50/run-3/checkpoints/best-epoch=14-val_acc=0.770.ckpt"
+
+# Logging
+logging:
+  log_interval: 100
+  save_best: true
+  save_latest: true
+  tensorboard: true
+  csv: true
+
+# Early stopping
+early_stopping:
+  enabled: true
+  patience: 5
+  min_delta: 0.001
+
+# LMDB
+lmdb:
+  train_size: 250
+  val_size: 50
+  test_size: 50
+
+annotation:
+  train_ratio: 0.7
+  val_ratio: 0.15
+  stratify_by_class: true
+  seed: 42
