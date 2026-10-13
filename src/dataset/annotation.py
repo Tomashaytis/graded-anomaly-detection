@@ -10,6 +10,7 @@ Typical usage example:
     generator.create_dataset(Path("annotations"), train_ratio=0.7, val_ratio=0.15)
 """
 
+import re
 import random
 import pandas as pd
 
@@ -71,7 +72,7 @@ class AnnotationGenerator:
 
         return video_files
 
-    def parse_directory_structure(self, video_path: Path) -> Tuple[str, str, str]:
+    def parse_directory_structure(self, video_path: Path) -> Tuple[str, str, int, str]:
         """
         Extract information from the directory structure.
 
@@ -84,10 +85,12 @@ class AnnotationGenerator:
         parts = rel_path.parts
 
         category = parts[0] if len(parts) > 0 else "unknown"
-        my_class = parts[1] if len(parts) > 1 else "unknown"
+        action_class_with_level = parts[1] if len(parts) > 1 else "unknown"
+        m = re.match(r'^(.*?)\s*\((\d)\)\s*$', action_class_with_level)
+        action_class, level = m.group(1), int(m.group(2))
         source_class = parts[2] if len(parts) > 2 else "unknown"
 
-        return category, my_class, source_class
+        return category, action_class, level, source_class
 
     def generate_annotations(self):
         """
@@ -101,23 +104,23 @@ class AnnotationGenerator:
 
         for video_file in video_files:
             try:
-                category, my_class, source_class = self.parse_directory_structure(video_file)
+                category, action_class, level, source_class = self.parse_directory_structure(video_file)
                 rel_path = str(video_file)
-                temp_data.append([rel_path, my_class, category, source_class])
-                if my_class != 'normal':
-                    all_labels.add(my_class)
+                temp_data.append([rel_path, action_class, level, category, source_class])
+                if action_class != 'normal':
+                    all_labels.add(action_class)
             except Exception as e:
                 print(f"Processing error for video '{video_file}': {e}")
 
         label2id = { label: idx for idx, label in enumerate(sorted(all_labels)) }
 
-        for video_path, label, category, source_class in temp_data:
+        for video_path, label, level, category, source_class in temp_data:
             label_int = -1 if label == 'normal' else label2id[label]
-            data.append([video_path, label, label_int, category, source_class, None])
+            data.append([video_path, label, label_int, level, category, source_class, None])
 
         self._annotations = pd.DataFrame(
             data,
-            columns=['video_path', 'label', 'label_id', 'category', 'source_class', 'subset']
+            columns=['video_path', 'label', 'label_id', 'level', 'category', 'source_class', 'subset']
         )
 
         self._id2label = { v: k for k, v in label2id.items() }
@@ -243,24 +246,52 @@ class AnnotationGenerator:
         """
         stats = self.get_statistics()
 
+        levels = {
+            0: '-',
+            1: '!',
+            2: '!!',
+            3: '!!!'
+        }
+
         print(f"\nDataset statistics:")
         print(f"Total videos: {stats['total_videos']}")
 
         category_class_counts = defaultdict(lambda: defaultdict(int))
         for _, row in self._annotations.iterrows():
-            category_class_counts[row['category']][row['label']] += 1
+            key = (row['label'], row['level'])
+            category_class_counts[row['category']][key] += 1
 
         category_totals = {cat: sum(classes.values()) for cat, classes in category_class_counts.items()}
 
         print(f"\nCategories ({len(category_totals)}):")
         for category, total in sorted(category_totals.items(), key=lambda x: x[1], reverse=True):
             print(f"  {category} ({total})")
-            for cls, count in sorted(category_class_counts[category].items(), key=lambda x: x[1], reverse=True):
-                print(f"    {cls} ({count})")
+            for (cls, level), count in sorted(
+                    category_class_counts[category].items(),
+                    key=lambda x: x[1],
+                    reverse=True
+            ):
+                print(f"    [{levels[level]}] {cls} ({count})")
 
         print(f"\nSources ({len(stats['sources'])}):")
         for src, count in sorted(stats['sources'].items(), key=lambda x: x[1], reverse=True):
             print(f"  {src}: {count}")
+
+        dataset_total = defaultdict(int)
+        dataset_unique_sources = defaultdict(set)
+
+        for _, row in self._annotations.iterrows():
+            src = row['source_class']
+            m = re.search(r'\(([^)]+)\)$', src)
+            dataset = m.group(1) if m else 'unknown'
+
+            dataset_total[dataset] += 1
+            dataset_unique_sources[dataset].add(src)
+
+        print(f"\nSources by dataset:")
+        for dataset, total in sorted(dataset_total.items(), key=lambda x: x[1], reverse=True):
+            unique = len(dataset_unique_sources[dataset])
+            print(f"  {dataset}: {total} videos, {unique} unique sources")
 
         print(f"\nSplit distribution:")
         for subset, count in sorted(stats['subsets'].items()):
