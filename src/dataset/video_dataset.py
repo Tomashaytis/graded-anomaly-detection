@@ -1,13 +1,12 @@
 """
 Video Dataset Module
 """
-import numpy as np
 import torch
 
 from typing import Tuple
 from pathlib import Path
 
-from src.utils import create_augmentations
+from src.utils import create_complex_augmentations
 
 from .lmdb_reader import LMDBReader
 
@@ -23,8 +22,8 @@ class VideoDataset(torch.utils.data.Dataset):
             class_counts: dict,
             is_train: bool = True,
             video_frame_size: int = 224,
-            video_max_frames: int = 32,
-            aggressive_aug_threshold: int = 300,
+            video_max_frames: int = 64,
+            num_optional_augmentations: int = 2,
     ):
         """
         Initialize VideoDataset.
@@ -34,14 +33,14 @@ class VideoDataset(torch.utils.data.Dataset):
         :param is_train: if True, apply augmentations; if False, only basic transforms.
         :param video_frame_size: video frame size.
         :param video_max_frames: maximum number of frames in video.
-        :param aggressive_aug_threshold: Aggressive augmentation threshold.
+        :param num_optional_augmentations: Maximum number of optional augmentations.
         """
         self._reader = LMDBReader(lmdb_path)
         self._class_counts = class_counts
         self._is_train = is_train
         self._video_frame_size = video_frame_size
         self._video_max_frames = video_max_frames
-        self._aggressive_aug_threshold = aggressive_aug_threshold
+        self._num_optional_augmentations = num_optional_augmentations
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int, int]:
         """
@@ -56,8 +55,12 @@ class VideoDataset(torch.utils.data.Dataset):
         video = data['video']
 
         if self._is_train:
-            class_samples = self._class_counts[label]
-            transforms = create_augmentations(class_samples, size=self._video_frame_size, aggressive_threshold=self._aggressive_aug_threshold)
+            transforms = create_complex_augmentations(
+                n_frames=self._video_max_frames,
+                size=self._video_frame_size,
+                stride=video.shape[1] / self._video_max_frames,
+                num_optional_augmentations=self._num_optional_augmentations
+            )
             video = transforms(video)
 
         return video, label, level

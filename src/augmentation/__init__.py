@@ -1,8 +1,8 @@
 from .base_augmentation import BaseAugmentation
 from .spatial_augmantations import (RandomHorizontalFlip, RandomGrayscale, RandomRotation,
                                     RandomResizedCrop, ColorJitter, Resize)
-from .temporal_augmentations import (TemporalFlip, TemporalSubsample, TemporalShift,
-                                     TemporalRandomCrop, TimeMasking, SpeedChange)
+from .temporal_augmentations import (TemporalFlip, TemporalSubsample, TemporalShift, TemporalRandomCrop,
+                                     TimeMasking, SpeedChange, TemporalStrideSample, TemporalStridePick)
 from .distortion_augmentations import GaussianNoise, GaussianBlur, RandomErasing
 from .composite_augmentations import ComposeVideo, AdaptiveAugmentation, RandomApply
 
@@ -20,6 +20,8 @@ __all__ = [
     'TemporalRandomCrop',
     'TimeMasking',
     'SpeedChange',
+    'TemporalStrideSample',
+    'TemporalStridePick',
     'GaussianNoise',
     'GaussianBlur',
     'RandomErasing',

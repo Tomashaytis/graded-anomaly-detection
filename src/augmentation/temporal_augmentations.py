@@ -136,10 +136,8 @@ class SpeedChange(BaseAugmentation):
             speed = random.uniform(*self._speed_range)
             new_T = max(1, int(T * speed))
 
-            # Add batch dimension: [C, T, H, W] -> [1, C, T, H, W]
             video = video.unsqueeze(0)
 
-            # Interpolate along temporal dimension (dim=2)
             video = F.interpolate(
                 video,
                 size=(new_T, H, W),
@@ -147,7 +145,41 @@ class SpeedChange(BaseAugmentation):
                 align_corners=False
             )
 
-            # Remove batch dimension: [1, C, new_T, H, W] -> [C, new_T, H, W]
             video = video.squeeze(0)
             return video
         return video
+
+class TemporalStrideSample(BaseAugmentation):
+    """Keep every 2nd frame with a random offset (0 or 1), halving temporal length."""
+
+    def __init__(self, stride: int = 2):
+        """
+        Initialize temporal stride sample augmentation.
+
+        :param stride: Stride value for sampling
+        """
+        self._stride = stride
+
+    def apply(self, video: torch.Tensor) -> torch.Tensor:
+        offset = random.randint(0, self._stride - 1)
+        return video[:, offset::self._stride, :, :]
+
+class TemporalStridePick(BaseAugmentation):
+    """Replace each stride of consecutive frames with one randomly chosen frame."""
+
+    def __init__(self, stride: int = 2):
+        """
+        Initialize temporal stride pick augmentation.
+
+        :param stride: Stride value for sampling
+        """
+        self._stride = stride
+
+    def apply(self, video: torch.Tensor) -> torch.Tensor:
+        C, T, H, W = video.shape
+        T_trim = T - (T % self._stride)
+        v = video[:, :T_trim, :, :]
+        n_groups = T_trim // self._stride
+        choices = torch.randint(0, self._stride, (n_groups,), device=v.device)
+        idx = torch.arange(0, T_trim, self._stride, device=v.device) + choices
+        return v[:, idx, :, :]
