@@ -26,6 +26,33 @@ class RandomHorizontalFlip(BaseAugmentation):
         return video
 
 
+class RandomGrayscale(BaseAugmentation):
+    """Grayscale convertion for video."""
+
+    def __init__(self, p: float = 0.5):
+        """
+        Initialize grayscale augmentation.
+
+        :param p: Probability of applying the flip (0.0 to 1.0)
+        """
+        self._p = p
+
+    def apply(self, video: torch.Tensor) -> torch.Tensor:
+        if random.random() < self._p:
+            C, T, H, W = video.shape
+
+            weights = torch.tensor(
+                [0.299, 0.587, 0.114],
+                device=video.device,
+                dtype=video.dtype,
+            ).view(C, 1, 1, 1)
+
+            gray = (video * weights).sum(dim=0, keepdim=True)
+
+            video = gray.expand(C, T, H, W).contiguous()
+        return video
+
+
 class RandomResizedCrop(BaseAugmentation):
     """Random resized crop for video."""
 

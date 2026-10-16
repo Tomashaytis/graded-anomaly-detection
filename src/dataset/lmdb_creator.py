@@ -38,9 +38,19 @@ class LMDBCreator:
             self,
             video_paths: List[str],
             labels: List[int],
+            levels: List[int],
             max_frames: int = 32,
             resize_size: Tuple[int, int] = (224, 224)
     ) -> dict:
+        """
+        Create LMDB database.
+        :param video_paths: Path to video files.
+        :param labels: Labels corresponding to each video.
+        :param levels: Levels corresponding to each video.
+        :param max_frames: Maximum number of frames contained in each video.
+        :param resize_size: Size to resize the videos.
+        :return: Statistics about LMDB database.
+        """
         if len(video_paths) != len(labels):
             raise ValueError(f"Video paths ({len(video_paths)}) and labels ({len(labels)}) length mismatch")
 
@@ -59,12 +69,13 @@ class LMDBCreator:
         }
 
         idx_correction = 0
+        idx, txn = None, None
 
         try:
             txn = env.begin(write=True)
 
-            for idx, (video_path, label) in enumerate(
-                    tqdm(zip(video_paths, labels), total=len(video_paths), desc="Processing videos")
+            for idx, (video_path, label, level) in enumerate(
+                    tqdm(zip(video_paths, labels, levels), total=len(video_paths), desc="Processing videos")
             ):
                 try:
                     with VideoLoader(str(video_path)) as loader:
@@ -79,6 +90,7 @@ class LMDBCreator:
                     data = {
                         'video': video,
                         'label': label,
+                        'level': level,
                         'path': video_path,
                         'index': idx - idx_correction
                     }
@@ -112,7 +124,9 @@ class LMDBCreator:
 
         except Exception as e:
             print(f"Fatal error at index {idx}: {e}")
-            txn.abort()
+
+            if txn is not None:
+                txn.abort()
             raise
         finally:
             env.close()

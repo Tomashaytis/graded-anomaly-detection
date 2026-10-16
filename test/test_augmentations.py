@@ -2,15 +2,14 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-from tqdm import tqdm
 from matplotlib.animation import FuncAnimation
 
 from src.dataset import VideoLoader
 from src.augmentation import *
 from src.utils import create_augmentations
 
-VIDEO_PATH = '../data/test_video_2.mp4'
-
+VIDEO_PATH = '../data/dataset/overcoming obstacles/turnstile jumping (3)/turnstile jumping (Hand-assembled)/001_01.mp4'
+# VIDEO_PATH = "H:\\Павел\\НИРС\\action-marker\\data\\dataset\\strange\\smoking (2)\\smoking (Kinetics-700)\\6hfqkR9EaiA_000008_000018.mp4"
 
 def visualize_video_augmentation(video_tensor: torch.Tensor, transform, interval: int = 0):
     """
@@ -18,12 +17,10 @@ def visualize_video_augmentation(video_tensor: torch.Tensor, transform, interval
     """
     augmented = transform(video_tensor)
 
-    # Берем минимальное количество кадров из обоих видео
     total_frames = min(video_tensor.shape[1], augmented.shape[1])
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
 
-    # Показываем первый кадр
     frame_orig = video_tensor[:, 0].permute(1, 2, 0).numpy()
     frame_orig = np.clip(frame_orig, 0, 1)
     img1 = ax1.imshow(frame_orig)
@@ -49,7 +46,7 @@ def visualize_video_augmentation(video_tensor: torch.Tensor, transform, interval
         return img1, img2
 
     anim = FuncAnimation(fig, update, frames=total_frames * 2,
-                         interval=interval, repeat=True, blit=True)
+                         interval=interval, repeat=True, blit=False)
 
     plt.tight_layout()
     plt.show()

@@ -2,11 +2,12 @@
 Video Loader Module
 """
 
-import torch
 import cv2
+import torch
 import numpy as np
 
 from pathlib import Path
+from decord import VideoReader, cpu
 from typing import Optional, Tuple, List, Generator
 
 
@@ -20,13 +21,11 @@ class VideoLoader:
         :param video_path: path to video file
         """
         self.video_path = Path(video_path)
-        self._cap = None
-        self._total_frames = 0
-        self._fps = 0
-        self._frame_width = 0
-        self._frame_height = 0
-
-        self._load_video_info()
+        self._vr = VideoReader(str(self.video_path), ctx=cpu(0))
+        self._total_frames = len(self._vr)
+        self._fps = self._vr.get_avg_fps()
+        h, w = self._vr[0].shape[:2]
+        self._frame_width, self._frame_height = w, h
 
     def _load_video_info(self):
         """Load video information."""
@@ -142,6 +141,91 @@ class VideoLoader:
             'duration_seconds': self._total_frames / self._fps if self._fps > 0 else 0
         }
 
+    @staticmethod
+    def detect_black_borders(frame: np.ndarray,
+                             threshold: int = 16) -> Tuple[int, int, int, int]:
+        """
+        Detect near-black borders around the frame.
+
+        :param frame: BGR frame (uint8)
+        :param threshold: max channel value to consider a pixel black (0..255)
+        :return: (top, bottom, left, right) — number of pixels to crop from each side
+        """
+        if frame.size == 0:
+            return 0, 0, 0, 0
+
+        black = np.all(frame <= threshold, axis=2)
+
+        h, w = black.shape
+
+        row_is_black = black.all(axis=1)
+        col_is_black = black.all(axis=0)
+
+        top = bottom = left = right = 0
+
+        while top < h and row_is_black[top]:
+            top += 1
+
+        while bottom < h and row_is_black[h - 1 - bottom]:
+            bottom += 1
+
+        while left < w and col_is_black[left]:
+            left += 1
+
+        while right < w and col_is_black[w - 1 - right]:
+            right += 1
+
+        if top + bottom >= h:
+            top = bottom = 0
+        if left + right >= w:
+            left = right = 0
+
+        return top, bottom, left, right
+
+    @staticmethod
+    def reflect_pad_and_resize(frame: np.ndarray,
+                               target_size: Tuple[int, int],
+                               crop_black: bool = True) -> np.ndarray:
+        """
+        Crop black borders, then bring the frame to the target aspect ratio:
+        - if the frame is wider than the target — center-crop by width
+          (no vertical reflection, so people are not flipped upside down);
+        - if the frame is taller than the target — reflect left/right
+          (bilateral symmetry is preserved, so it looks natural).
+        Finally resize to the target size.
+        """
+        target_h, target_w = target_size
+
+        if crop_black:
+            top, bottom, left, right = VideoLoader.detect_black_borders(frame)
+            h, w = frame.shape[:2]
+            if top + bottom < h and left + right < w and (top or bottom or left or right):
+                frame = frame[top:h - bottom, left:w - right]
+
+        h, w = frame.shape[:2]
+        if h == 0 or w == 0:
+            return np.zeros((target_h, target_w, 3), dtype=frame.dtype)
+
+        target_ratio = target_w / target_h
+        current_ratio = w / h
+
+        if current_ratio > target_ratio:
+            new_w = min(int(round(h * target_ratio)), w)
+            x0 = (w - new_w) // 2
+            frame = frame[:, x0:x0 + new_w]
+        else:
+            new_w = int(round(h * target_ratio))
+            pad = new_w - w
+            pad_left = pad // 2
+            pad_right = pad - pad_left
+            if pad_left or pad_right:
+                frame = cv2.copyMakeBorder(
+                    frame, 0, 0, pad_left, pad_right,
+                    borderType=cv2.BORDER_REFLECT_101
+                )
+
+        return cv2.resize(frame, (target_w, target_h), interpolation=cv2.INTER_AREA)
+
     def to_tensor(self,
                   max_frames: Optional[int] = None,
                   resize_size: Optional[Tuple[int, int]] = None,
@@ -156,77 +240,33 @@ class VideoLoader:
         :param sampling_strategy: 'first', 'uniform', 'random_segment'
         :return: tensor of shape [C, T, H, W]
         """
-        if max_frames is None:
-            frames = []
-            for i, frame in enumerate(self.read_frames()):
-                # BGR to RGB
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-                if resize_size is not None:
-                    width, height = resize_size[1], resize_size[0]
-                    frame = cv2.resize(frame, (width, height))
-
-                frame_tensor = torch.from_numpy(frame).permute(2, 0, 1).float()
-                if normalize:
-                    frame_tensor = frame_tensor / 255.0
-                frames.append(frame_tensor)
-
-            if not frames:
-                return torch.empty(0)
-
-            return torch.stack(frames, dim=1)
-
         total_frames = self._total_frames
 
-        if sampling_strategy == 'first':
-            # first max_frames of frames
-            frame_indices = range(min(max_frames, total_frames))
-
-        elif sampling_strategy == 'uniform':
-            # Uniform frames
+        if sampling_strategy == 'uniform':
             frame_indices = np.linspace(0, total_frames - 1, max_frames).astype(int)
-
+        elif sampling_strategy == 'first':
+            frame_indices = np.arange(min(max_frames, total_frames))
         elif sampling_strategy == 'random_segment':
-            # Random segment
             if total_frames <= max_frames:
-                frame_indices = range(total_frames)
+                frame_indices = np.arange(total_frames)
             else:
                 start = np.random.randint(0, total_frames - max_frames + 1)
-                frame_indices = range(start, start + max_frames)
+                frame_indices = np.arange(start, start + max_frames)
         else:
             raise ValueError(f"Unknown sampling_strategy: {sampling_strategy}")
 
-        # Loading frames
-        frames = []
-        for i in frame_indices:
-            frame = self.frame(i)
-            if frame is None:
-                if frames:
-                    frame = frames[-1].clone()
-                    continue
-                else:
-                    frame = np.zeros((self._frame_height, self._frame_width, 3), dtype=np.uint8)
+        frames = self._vr.get_batch(frame_indices).asnumpy()
 
-            # BGR to RGB
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-            # Resize if needed
+        processed = []
+        for frame in frames:
             if resize_size is not None:
-                width, height = resize_size[1], resize_size[0]
-                frame = cv2.resize(frame, (width, height))
-
-            # To tensor [H, W, C] -> [C, H, W]
-            frame_tensor = torch.from_numpy(frame).permute(2, 0, 1).float()
-
+                frame = VideoLoader.reflect_pad_and_resize(frame, resize_size)
+            t = torch.from_numpy(frame).permute(2, 0, 1).float()
             if normalize:
-                frame_tensor = frame_tensor / 255.0
+                t = t / 255.0
+            processed.append(t)
 
-            frames.append(frame_tensor)
-
-        if not frames:
-            return torch.empty(0)
-
-        return torch.stack(frames, dim=1)
+        return torch.stack(processed, dim=1)
 
     def __enter__(self):
         self._cap = cv2.VideoCapture(str(self.video_path))

@@ -75,7 +75,7 @@ model_presets:
 # Data configuration
 data:
   video_frame_size: 224
-  video_max_frames: 32
+  video_max_frames: 64
 
 # Paths
 paths:
@@ -85,9 +85,9 @@ paths:
   annotations_val: "data/dataset/annotations_val.csv"
   annotations_test: "data/dataset/annotations_test.csv"
   id2label: "data/dataset/id2label.json"
-  train_lmdb: "D:/Projects/actions-data/train_lmdb"
-  val_lmdb: "D:/Projects/actions-data/val_lmdb"
-  test_lmdb: "D:/Projects/actions-data/test_lmdb"
+  train_lmdb: "F:/Projects/actions-data/train_lmdb"
+  val_lmdb: "F:/Projects/actions-data/val_lmdb"
+  test_lmdb: "F:/Projects/actions-data/test_lmdb"
   output_dir: "runs/model=I3D-8x8-R50"
   checkpoint: "runs/model=I3D-8x8-R50/run-3/checkpoints/best-epoch=14-val_acc=0.770.ckpt"
 
@@ -107,9 +107,12 @@ early_stopping:
 
 # LMDB
 lmdb:
-  train_size: 250
-  val_size: 50
-  test_size: 50
+  create_train: false
+  create_val: false
+  create_test: true
+  train_size: 500
+  val_size: 100
+  test_size: 100
 
 annotation:
   train_ratio: 0.7

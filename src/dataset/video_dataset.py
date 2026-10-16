@@ -43,15 +43,16 @@ class VideoDataset(torch.utils.data.Dataset):
         self._video_max_frames = video_max_frames
         self._aggressive_aug_threshold = aggressive_aug_threshold
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int]:
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int, int]:
         """
         Load and augment video by index.
 
         :param idx: index of the video.
-        :return: video (tensor of shape [C, T, H, W] (3, 32, 224, 224)) and label (class label as int)
+        :return: video (tensor of shape [C, T, H, W] (3, 32, 224, 224)), label (class label as int) and level (0 - 3)
         """
         data = self._reader.get(idx)
         label = data['label']
+        level = data['level']
         video = data['video']
 
         if self._is_train:
@@ -59,7 +60,7 @@ class VideoDataset(torch.utils.data.Dataset):
             transforms = create_augmentations(class_samples, size=self._video_frame_size, aggressive_threshold=self._aggressive_aug_threshold)
             video = transforms(video)
 
-        return video, label
+        return video, label, level
 
     def __len__(self) -> int:
         """
