@@ -8,7 +8,7 @@ from matplotlib.animation import FuncAnimation
 
 from src.dataset import LMDBReader
 
-LMDB_PATH = "D:/Projects/actions-data/train_lmdb"
+LMDB_PATH = "F:/Projects/actions-data/train_lmdb"
 
 
 def visualize_lmdb_video(video_tensor: torch.Tensor, interval: int = 0):

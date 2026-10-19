@@ -109,7 +109,7 @@ early_stopping:
 lmdb:
   create_train: false
   create_val: false
-  create_test: true
+  create_test: false
   train_size: 500
   val_size: 100
   test_size: 100

@@ -1,6 +1,6 @@
 from .base_augmentation import BaseAugmentation
-from .spatial_augmantations import (RandomHorizontalFlip, RandomGrayscale, RandomRotation,
-                                    RandomResizedCrop, ColorJitter, Resize)
+from .spatial_augmantations import RandomHorizontalFlip, RandomRotation, RandomResizedCrop, Resize
+from .channel_augmentations import ColorJitter, RandomGrayscale
 from .temporal_augmentations import (TemporalFlip, TemporalSubsample, TemporalShift, TemporalRandomCrop,
                                      TimeMasking, SpeedChange, TemporalStrideSample, TemporalStridePick)
 from .distortion_augmentations import GaussianNoise, GaussianBlur, RandomErasing
