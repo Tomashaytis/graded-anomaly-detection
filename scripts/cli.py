@@ -24,7 +24,7 @@ from lightning.pytorch.callbacks import (
 )
 
 from src.utils import *
-from src.modules import VideoModule
+from src.modules import SingleHeadVideoModule
 from src.callbacks import MetricsCallback
 from src.datamodules import VideoDataModule
 from src.dataset import AnnotationGenerator, LMDBCreator
@@ -223,7 +223,7 @@ def train(
     print(f"{'=' * 60}\n")
 
     # Lightning Module
-    lightning_module = VideoModule(
+    lightning_module = SingleHeadVideoModule(
         model=model,
         num_classes=num_classes,
         learning_rate=config['training']['learning_rate'],
@@ -347,7 +347,7 @@ def evaluate(
     )
 
     # LightningModule
-    lightning_module = VideoModule(
+    lightning_module = SingleHeadVideoModule(
         model=model,
         num_classes=num_classes,
         learning_rate=config['training']['learning_rate'],

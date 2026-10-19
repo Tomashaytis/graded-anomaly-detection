@@ -1,5 +1,5 @@
-from .video_module import VideoModule
+from .video_module import SingleHeadVideoModule
 
 __all__ = [
-    'VideoModule'
+    'SingleHeadVideoModule'
 ]

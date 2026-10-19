@@ -6,7 +6,6 @@ from matplotlib.animation import FuncAnimation
 
 from src.dataset import VideoLoader
 from src.augmentation import *
-from src.utils import create_simple_augmentations
 from src.utils import create_complex_augmentations
 
 VIDEO_PATH = '../data/test.mp4'

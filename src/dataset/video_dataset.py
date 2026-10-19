@@ -1,6 +1,7 @@
 """
 Video Dataset Module
 """
+
 import torch
 
 from typing import Tuple
@@ -9,6 +10,8 @@ from pathlib import Path
 from src.utils import create_complex_augmentations
 
 from .lmdb_reader import LMDBReader
+
+LEVEL_MAP = { 0: 0.0, 1: 0.4, 2: 0.7, 3: 1.0 }
 
 
 class VideoDataset(torch.utils.data.Dataset):
@@ -42,7 +45,7 @@ class VideoDataset(torch.utils.data.Dataset):
         self._video_max_frames = video_max_frames
         self._num_optional_augmentations = num_optional_augmentations
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int, int]:
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int, float]:
         """
         Load and augment video by index.
 
@@ -51,7 +54,7 @@ class VideoDataset(torch.utils.data.Dataset):
         """
         data = self._reader.get(idx)
         label = data['label']
-        level = data['level']
+        level = LEVEL_MAP[data['level']]
         video = data['video']
 
         if self._is_train:

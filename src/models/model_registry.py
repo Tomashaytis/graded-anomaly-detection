@@ -3,19 +3,16 @@ Model registry and factory for video classification models.
 """
 
 from .base_model import BaseVideoModel
-from .i3d_r50 import I3DR50
-from .x3d import X3D
-from .slowfast_r50 import SlowFastR50
+from src.models.single_head import I3DR50, SlowFastR50, X3D
 
 
 MODEL_REGISTRY = {
     'i3d_r50': I3DR50,
+    'slowfast_r50': SlowFastR50,
     'x3d_xs': X3D,
     'x3d_s': X3D,
     'x3d_m': X3D,
     'x3d_l': X3D,
-    'slow_r50': SlowFastR50,
-    'slowfast_r50': SlowFastR50,
 }
 
 

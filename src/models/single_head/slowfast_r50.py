@@ -7,7 +7,7 @@ import torch.nn as nn
 
 from typing import List
 
-from .base_model import BaseVideoModel
+from src.models.base_model import BaseVideoModel
 
 
 class SlowFastR50(BaseVideoModel):

@@ -100,7 +100,7 @@ class BaseVideoModel(nn.Module, ABC):
         self._set_head(new_head)
 
     @abstractmethod
-    def _set_head(self, new_head: nn.Module) -> None:
+    def _set_head(self, new_head: nn.Module | None) -> None:
         """
         Set the new classifier head on the model.
 

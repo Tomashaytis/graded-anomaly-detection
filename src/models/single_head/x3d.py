@@ -5,7 +5,7 @@ X3D model variants (XS, S, M, L) for video classification.
 import torch
 import torch.nn as nn
 
-from .base_model import BaseVideoModel
+from src.models.base_model import BaseVideoModel
 
 
 class X3D(BaseVideoModel):

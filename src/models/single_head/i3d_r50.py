@@ -5,7 +5,7 @@ I3D with ResNet-50 backbone model.
 import torch
 import torch.nn as nn
 
-from .base_model import BaseVideoModel
+from src.models.base_model import BaseVideoModel
 
 
 class I3DR50(BaseVideoModel):

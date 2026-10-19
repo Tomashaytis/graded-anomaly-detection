@@ -1,5 +1,5 @@
 """
-Video Module for Lighting.
+Single Head Video Module for Lightning.
 """
 
 import lightning as L
@@ -7,8 +7,8 @@ import torch
 import torch.nn as nn
 
 
-class VideoModule(L.LightningModule):
-    """LightningModule for video action recognition."""
+class SingleHeadVideoModule(L.LightningModule):
+    """LightningModule for video action recognition with one head."""
 
     def __init__(
             self,
@@ -23,7 +23,7 @@ class VideoModule(L.LightningModule):
             class_counts: dict = None,
     ):
         """
-        Initialize VideoLightningModule.
+        Initialize SingleHeadVideoModule.
 
         :param model: PyTorch model.
         :param num_classes: Number of classes.
@@ -48,64 +48,98 @@ class VideoModule(L.LightningModule):
             total_samples = sum(class_counts.values())
             class_weights = torch.zeros(num_classes)
             for class_id, count in class_counts.items():
-                class_weights[class_id] = total_samples / (num_classes * count)
+                if 0 <= class_id < num_classes:
+                    class_weights[class_id] = total_samples / (num_classes * count)
 
             class_weights = class_weights / class_weights.mean()
-
-            self.criterion = nn.CrossEntropyLoss(label_smoothing=label_smoothing, weight=class_weights)
+            self.criterion = nn.CrossEntropyLoss(
+                label_smoothing=label_smoothing,
+                weight=class_weights,
+                ignore_index=-1,
+            )
         else:
-            self.criterion = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
+            self.criterion = nn.CrossEntropyLoss(
+                label_smoothing=label_smoothing,
+                ignore_index=-1,
+            )
 
         self.save_hyperparameters(ignore=['model'])
 
     def forward(self, x):
+        """
+        Forward pass through the model.
+
+        :param x: Input video tensor of shape (B, C, T, H, W).
+        :return: logits
+        """
         return self.model(x)
 
-    def training_step(self, batch, batch_idx):
-        videos, labels = batch
+    def _shared_step(self, batch, stage: str):
+        """
+        Lighting shared step for train/test/val stage
+
+        :param batch: Video batch.
+        :return: Loss.
+        """
+        videos, labels, _ = batch
+
+        # Model forward pass
         outputs = self(videos)
+
+        # Loss
         loss = self.criterion(outputs, labels)
 
-        # Calculate accuracy
-        _, preds = torch.max(outputs, 1)
-        acc = (preds == labels).float().mean()
+        # Metrics
+        with torch.no_grad():
+            mask = labels != -1
+            if mask.any():
+                _, preds = torch.max(outputs[mask], 1)
+                acc = (preds == labels[mask]).float().mean()
+            else:
+                acc = torch.tensor(0.0, device=outputs.device)
 
-        # Log metrics (prog_bar=True shows in progress bar)
-        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True)
-        self.log('train_acc', acc, on_step=True, on_epoch=True, prog_bar=True)
+        # Logging
+        self.log(f'{stage}_loss', loss, on_step=(stage == 'train'), on_epoch=True, prog_bar=True)
+        self.log(f'{stage}_acc', acc, on_step=(stage == 'train'), on_epoch=True, prog_bar=True)
 
         return loss
 
+    def training_step(self, batch, batch_idx):
+        """
+        Lighting train step.
+
+        :param batch: Video batch.
+        :param batch_idx: Video batch idx.
+        :return: Loss.
+        """
+        return self._shared_step(batch, 'train')
+
     def validation_step(self, batch, batch_idx):
-        videos, labels = batch
-        outputs = self(videos)
-        loss = self.criterion(outputs, labels)
+        """
+        Lighting validation step.
 
-        # Calculate accuracy
-        _, preds = torch.max(outputs, 1)
-        acc = (preds == labels).float().mean()
-
-        # Log metrics
-        self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log('val_acc', acc, on_step=False, on_epoch=True, prog_bar=True)
-
-        return {'val_loss': loss, 'val_acc': acc}
+        :param batch: Video batch.
+        :param batch_idx: Video batch idx.
+        :return: Loss.
+        """
+        return self._shared_step(batch, 'val')
 
     def test_step(self, batch, batch_idx):
-        videos, labels = batch
-        outputs = self(videos)
-        loss = self.criterion(outputs, labels)
+        """
+        Lighting test step.
 
-        _, preds = torch.max(outputs, 1)
-        acc = (preds == labels).float().mean()
-
-        self.log('test_loss', loss, on_step=False, on_epoch=True)
-        self.log('test_acc', acc, on_step=False, on_epoch=True)
-
-        return {'test_loss': loss, 'test_acc': acc}
+        :param batch: Video batch.
+        :param batch_idx: Video batch idx.
+        :return: Loss.
+        """
+        return self._shared_step(batch, 'test')
 
     def configure_optimizers(self):
-        """Configure optimizer and scheduler."""
+        """
+        Configure optimizer and scheduler.
+
+        :return: Optimizer and scheduler.
+        """
         trainable_params = filter(lambda p: p.requires_grad, self.model.parameters())
 
         if self.optimizer_name == 'adamw':

@@ -51,10 +51,12 @@ def create_complex_augmentations(n_frames: int = 32, size: int = 224, stride: in
             TemporalStrideSample(stride=stride),
             TemporalStridePick(stride=stride)
         ]
-    else:
+    elif stride > 1:
         temporal_selectors = [
             TemporalRandomCrop(clip_length=n_frames),
         ]
+    else:
+        temporal_selectors = []
 
 
     pipeline: List[BaseAugmentation] = [
