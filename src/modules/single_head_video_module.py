@@ -65,21 +65,21 @@ class SingleHeadVideoModule(L.LightningModule):
 
         self.save_hyperparameters(ignore=['model'])
 
-    def forward(self, x):
+    def forward(self, x) -> torch.Tensor:
         """
         Forward pass through the model.
 
         :param x: Input video tensor of shape (B, C, T, H, W).
-        :return: logits
+        :return: Logits.
         """
         return self.model(x)
 
-    def _shared_step(self, batch, stage: str):
+    def _shared_step(self, batch, stage: str) -> torch.Tensor:
         """
         Lighting shared step for train/test/val stage
 
         :param batch: Video batch.
-        :return: Loss.
+        :return: Loss value.
         """
         videos, labels, _ = batch
 
@@ -104,37 +104,37 @@ class SingleHeadVideoModule(L.LightningModule):
 
         return loss
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch, batch_idx) -> torch.Tensor:
         """
         Lighting train step.
 
         :param batch: Video batch.
         :param batch_idx: Video batch idx.
-        :return: Loss.
+        :return: Loss value.
         """
         return self._shared_step(batch, 'train')
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx) -> torch.Tensor:
         """
         Lighting validation step.
 
         :param batch: Video batch.
         :param batch_idx: Video batch idx.
-        :return: Loss.
+        :return: Loss value.
         """
         return self._shared_step(batch, 'val')
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch, batch_idx) -> torch.Tensor:
         """
         Lighting test step.
 
         :param batch: Video batch.
         :param batch_idx: Video batch idx.
-        :return: Loss.
+        :return: Loss value.
         """
         return self._shared_step(batch, 'test')
 
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> dict:
         """
         Configure optimizer and scheduler.
 

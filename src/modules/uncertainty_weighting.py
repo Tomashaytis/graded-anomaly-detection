@@ -18,7 +18,7 @@ class UncertaintyWeighting(nn.Module):
         super().__init__()
         self.log_vars = nn.Parameter(torch.zeros(num_tasks))
 
-    def forward(self, losses):
+    def forward(self, losses) -> torch.Tensor:
         """
         Forward pass for learnable loss weights.
 

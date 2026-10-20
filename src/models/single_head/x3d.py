@@ -9,7 +9,8 @@ from src.models.base_model import BaseVideoModel
 
 
 class X3D(BaseVideoModel):
-    """X3D model for video classification.
+    """
+    X3D model for video classification.
 
     Supports variants: 'x3d_xs', 'x3d_s', 'x3d_m', 'x3d_l'.
     """

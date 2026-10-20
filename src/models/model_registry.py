@@ -4,15 +4,23 @@ Model registry and factory for video classification models.
 
 from .base_model import BaseVideoModel
 from src.models.single_head import I3DR50, SlowFastR50, X3D
+from src.models.multi_head import I3DR50MultiHead, SlowFastR50MultiHead, X3DMultiHead
 
 
 MODEL_REGISTRY = {
-    'i3d_r50': I3DR50,
-    'slowfast_r50': SlowFastR50,
-    'x3d_xs': X3D,
-    'x3d_s': X3D,
-    'x3d_m': X3D,
-    'x3d_l': X3D,
+    'i3d_r50': (I3DR50, None),
+    'slowfast_r50': (SlowFastR50, None),
+    'x3d_xs': (X3D, 'x3d_xs'),
+    'x3d_s': (X3D, 'x3d_s'),
+    'x3d_m': (X3D, 'x3d_m'),
+    'x3d_l': (X3D, 'x3d_l'),
+
+    'i3d_r50_mh': (I3DR50MultiHead, None),
+    'slowfast_r50_mh': (SlowFastR50MultiHead, None),
+    'x3d_xs_mh': (X3DMultiHead, 'x3d_xs'),
+    'x3d_s_mh': (X3DMultiHead, 'x3d_s'),
+    'x3d_m_mh': (X3DMultiHead, 'x3d_m'),
+    'x3d_l_mh': (X3DMultiHead, 'x3d_l'),
 }
 
 
@@ -42,26 +50,19 @@ def create_model(
             f"Model '{model_name}' not found. Available models: {available}"
         )
 
-    model_class = MODEL_REGISTRY[model_name]
+    model_class, variant = MODEL_REGISTRY[model_name]
 
-    # Handle X3D variants which require variant parameter
-    if model_class == X3D:
-        model = model_class(
-            variant=model_name,
-            num_classes=num_classes,
-            dropout=dropout,
-            pretrained=pretrained,
-            weights_path=weights_path
-        )
-    else:
-        model = model_class(
-            num_classes=num_classes,
-            dropout=dropout,
-            pretrained=pretrained,
-            weights_path=weights_path
-        )
+    kwargs = {
+        'num_classes': num_classes,
+        'dropout': dropout,
+        'pretrained': pretrained,
+        'weights_path': weights_path,
+    }
+    if variant is not None:
+        kwargs['variant'] = variant
 
-    # Freeze backbone if requested
+    model = model_class(**kwargs)
+
     if freeze_backbone:
         model.freeze_backbone()
 
@@ -74,4 +75,4 @@ def list_available_models() -> dict:
 
     :return: Dictionary mapping model names to their class names.
     """
-    return {name: cls.__name__ for name, cls in MODEL_REGISTRY.items()}
+    return { name: cls.__name__ for name, (cls, _) in MODEL_REGISTRY.items() }

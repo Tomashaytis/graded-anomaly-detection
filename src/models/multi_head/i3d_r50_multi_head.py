@@ -1,10 +1,18 @@
+"""
+I3D R50 model with two heads for video classification.
+"""
+
 import torch
 import torch.nn as nn
+
+from typing import Tuple
 
 from src.models.base_model import BaseVideoModel
 
 
 class I3DR50MultiHead(BaseVideoModel):
+    """I3D R50 model with ResNet-50 backbone and two heads for video classification."""
+
     def _create_backbone(self) -> nn.Module:
         """
         Create I3D R50 backbone from pytorchvideo hub.
@@ -81,7 +89,7 @@ class I3DR50MultiHead(BaseVideoModel):
         for param in self.head2.parameters():
             param.requires_grad = True
 
-    def forward(self, x):
+    def forward(self, x) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass through the model.
 
