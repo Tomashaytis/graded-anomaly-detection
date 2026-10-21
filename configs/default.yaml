@@ -20,7 +20,7 @@ model:
 model_presets:
   i3d_r50:
     name: "i3d_r50"
-    pretrained: false
+    multi_head_mode: false
     weights_path: "models/3d-cnn/I3D_8x8_R50.pyth"
     freeze_backbone: true
     dropout: 0.5
@@ -29,7 +29,7 @@ model_presets:
 
   x3d_xs:
     name: "x3d_xs"
-    pretrained: false
+    multi_head_mode: false
     weights_path: "models/3d-cnn/X3D_XS.pyth"
     freeze_backbone: true
     dropout: 0.5
@@ -38,7 +38,7 @@ model_presets:
 
   x3d_s:
     name: "x3d_s"
-    pretrained: false
+    multi_head_mode: false
     weights_path: "models/3d-cnn/X3D_S.pyth"
     freeze_backbone: true
     dropout: 0.5
@@ -47,7 +47,7 @@ model_presets:
 
   x3d_m:
     name: "x3d_m"
-    pretrained: false
+    multi_head_mode: false
     weights_path: "models/3d-cnn/X3D_M.pyth"
     freeze_backbone: true
     dropout: 0.5
@@ -56,7 +56,7 @@ model_presets:
 
   x3d_l:
     name: "x3d_l"
-    pretrained: false
+    multi_head_mode: false
     weights_path: "models/3d-cnn/X3D_L.pyth"
     freeze_backbone: true
     dropout: 0.5
@@ -65,7 +65,7 @@ model_presets:
 
   slowfast_r50:
     name: "slowfast_r50"
-    pretrained: false
+    multi_head_mode: false
     weights_path: "models/3d-cnn/SLOWFAST_8x8_R50.pyth"
     freeze_backbone: true
     dropout: 0.5
@@ -74,7 +74,7 @@ model_presets:
 
   i3d_r50_mh:
     name: "i3d_r50_mh"
-    pretrained: false
+    multi_head_mode: true
     weights_path: "models/3d-cnn/I3D_8x8_R50.pyth"
     freeze_backbone: true
     dropout: 0.5
@@ -83,7 +83,7 @@ model_presets:
 
   slowfast_r50_mh:
     name: "slowfast_r50_mh"
-    pretrained: false
+    multi_head_mode: true
     weights_path: "models/3d-cnn/SLOWFAST_8x8_R50.pyth"
     freeze_backbone: true
     dropout: 0.5
@@ -92,7 +92,7 @@ model_presets:
 
   x3d_m_mh:
     name: "x3d_m_mh"
-    pretrained: false
+    multi_head_mode: true
     weights_path: "models/3d-cnn/X3D_M.pyth"
     freeze_backbone: true
     dropout: 0.5

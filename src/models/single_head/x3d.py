@@ -41,7 +41,7 @@ class X3D(BaseVideoModel):
                 f"Unknown X3D variant: {variant}. "
                 f"Available: {list(self.VARIANTS.keys())}"
             )
-        self.variant = variant
+        self._variant = variant
         super().__init__(**kwargs)
 
     def _create_backbone(self) -> nn.Module:
@@ -52,8 +52,8 @@ class X3D(BaseVideoModel):
         """
         model = torch.hub.load(
             'facebookresearch/pytorchvideo',
-            self.variant,
-            pretrained=self._pretrained
+            self._variant,
+            pretrained=False
         )
         return model
 
@@ -77,7 +77,7 @@ class X3D(BaseVideoModel):
 
         :return: List of stage indices.
         """
-        return self.FINETUNE_INDICES.get(self.variant, [4, 5])
+        return self.FINETUNE_INDICES.get(self._variant, [4, 5])
 
     def _set_head(self, new_head: nn.Module) -> None:
         """

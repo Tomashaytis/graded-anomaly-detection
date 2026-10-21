@@ -22,7 +22,7 @@ class SlowFastR50MultiHead(BaseVideoModel):
         model = torch.hub.load(
             'facebookresearch/pytorchvideo',
             'slowfast_r50',
-            pretrained=self._pretrained
+            pretrained=False
         )
         return model
 

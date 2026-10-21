@@ -17,7 +17,6 @@ class BaseVideoModel(nn.Module, ABC):
             self,
             num_classes: int,
             dropout: float = 0.5,
-            pretrained: bool = False,
             weights_path: Optional[str] = None
     ):
         """
@@ -25,13 +24,11 @@ class BaseVideoModel(nn.Module, ABC):
 
         :param num_classes: Number of output classes.
         :param dropout: Dropout probability for classifier head.
-        :param pretrained: Whether to load pretrained weights from torch.hub.
         :param weights_path: Path to custom weights file.
         """
         super().__init__()
         self._num_classes = num_classes
         self._dropout = dropout
-        self._pretrained = pretrained
         self._weights_path = weights_path
 
         # Build the model

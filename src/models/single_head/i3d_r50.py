@@ -20,7 +20,7 @@ class I3DR50(BaseVideoModel):
         model = torch.hub.load(
             'facebookresearch/pytorchvideo',
             'i3d_r50',
-            pretrained=self._pretrained
+            pretrained=False
         )
         return model
 

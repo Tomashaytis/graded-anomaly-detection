@@ -24,7 +24,7 @@ from lightning.pytorch.callbacks import (
 )
 
 from src.utils import *
-from src.modules import SingleHeadVideoModule
+from src.modules import VideoModule
 from src.callbacks import MetricsCallback
 from src.datamodules import VideoDataModule
 from src.dataset import AnnotationGenerator, LMDBCreator
@@ -43,9 +43,7 @@ app = typer.Typer()
 def create_lmdb(
         config_path: str = typer.Option(DEFAULT_CONFIG_PATH, "--config", "-c", help="Path to YAML config file"),
 ):
-    """
-    Create LMDB for train, validate and test dataset.
-    """
+    """Create LMDB for train, validate and test dataset."""
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
 
@@ -108,9 +106,7 @@ def create_lmdb(
 def annotate(
         config_path: str = typer.Option(DEFAULT_CONFIG_PATH, "--config", "-c", help="Path to YAML config file"),
 ):
-    """
-    Annotate video dataset.
-    """
+    """Annotate video dataset."""
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
 
@@ -130,10 +126,7 @@ def annotate(
 def dataset_overview(
         config_path: str = typer.Option(DEFAULT_CONFIG_PATH, "--config", "-c", help="Path to YAML config file"),
 ):
-    """
-    Show video dataset overview.
-    """
-
+    """Show video dataset overview."""
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
 
@@ -197,7 +190,9 @@ def train(
 
     # Load annotations for num_classes
     annotations_train_df = pd.read_csv(config['paths']['annotations_train'])
-    num_classes = len(annotations_train_df['label_id'].unique())
+    num_classes = len(
+        annotations_train_df[annotations_train_df['label_id'] != -1]['label_id'].unique()
+    )
     class_counts = annotations_train_df['label_id'].value_counts().to_dict()
 
     # Create model using factory with preset config
@@ -205,7 +200,6 @@ def train(
         model_name=model_config['name'],
         num_classes=num_classes,
         dropout=model_config['dropout'],
-        pretrained=model_config['pretrained'],
         weights_path=model_config.get('weights_path'),
         freeze_backbone=model_config['freeze_backbone'],
     )
@@ -223,7 +217,7 @@ def train(
     print(f"{'=' * 60}\n")
 
     # Lightning Module
-    lightning_module = SingleHeadVideoModule(
+    lightning_module = VideoModule(
         model=model,
         num_classes=num_classes,
         learning_rate=config['training']['learning_rate'],
@@ -233,27 +227,48 @@ def train(
         num_epochs=config['training']['num_epochs'],
         label_smoothing=config['training']['label_smoothing'],
         class_counts=class_counts,
+        multi_head_mode=model_config['multi_head_mode'],
     )
 
     # Callbacks
-    callbacks = [
-        ModelCheckpoint(
-            dirpath=output_dir / 'checkpoints',
-            filename='best-{epoch:02d}-{val_acc:.3f}',
-            monitor='val_acc',
-            mode='max',
-            save_top_k=3,
-            save_last=True,
-        ),
-        EarlyStopping(
-            monitor='val_acc',
-            patience=config['early_stopping']['patience'],
-            min_delta=config['early_stopping']['min_delta'],
-            mode='max',
-        ),
-        LearningRateMonitor(logging_interval='epoch'),
-        RichProgressBar(refresh_rate=1)
-    ]
+    if model_config['multi_head_mode']:
+        callbacks = [
+            ModelCheckpoint(
+                dirpath=output_dir / 'checkpoints',
+                filename='best-{epoch:02d}-{val_acc2_mh:.3f}',
+                monitor='val_acc2_mh',
+                mode='max',
+                save_top_k=3,
+                save_last=True,
+            ),
+            EarlyStopping(
+                monitor='val_acc2_mh',
+                patience=config['early_stopping']['patience'],
+                min_delta=config['early_stopping']['min_delta'],
+                mode='max',
+            ),
+            LearningRateMonitor(logging_interval='epoch'),
+            RichProgressBar(refresh_rate=1)
+        ]
+    else:
+        callbacks = [
+            ModelCheckpoint(
+                dirpath=output_dir / 'checkpoints',
+                filename='best-{epoch:02d}-{val_acc_sh:.3f}',
+                monitor='val_acc_sh',
+                mode='max',
+                save_top_k=3,
+                save_last=True,
+            ),
+            EarlyStopping(
+                monitor='val_acc_sh',
+                patience=config['early_stopping']['patience'],
+                min_delta=config['early_stopping']['min_delta'],
+                mode='max',
+            ),
+            LearningRateMonitor(logging_interval='epoch'),
+            RichProgressBar(refresh_rate=1)
+        ]
 
     # Logger
     loggers = []
@@ -329,7 +344,9 @@ def evaluate(
 
     # Load annotations for class information
     annotations_train_df = pd.read_csv(config['paths']['annotations_train'])
-    num_classes = len(annotations_train_df['label_id'].unique())
+    num_classes = len(
+        annotations_train_df[annotations_train_df['label_id'] != -1]['label_id'].unique()
+    )
     class_counts = annotations_train_df['label_id'].value_counts().to_dict()
 
     with open(config['paths']['id2label'], 'r', encoding='utf-8') as fp:
@@ -341,13 +358,12 @@ def evaluate(
         model_name=model_config['name'],
         num_classes=num_classes,
         dropout=model_config['dropout'],
-        pretrained=False,
         weights_path=None,
         freeze_backbone=False,
     )
 
     # LightningModule
-    lightning_module = SingleHeadVideoModule(
+    lightning_module = VideoModule(
         model=model,
         num_classes=num_classes,
         learning_rate=config['training']['learning_rate'],
@@ -357,6 +373,7 @@ def evaluate(
         num_epochs=config['training']['num_epochs'],
         label_smoothing=config['training']['label_smoothing'],
         class_counts=class_counts,
+        multi_head_mode=model_config['multi_head_mode'],
     )
 
     print(f"Loading weights from checkpoint: {checkpoint_path}")

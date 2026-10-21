@@ -55,7 +55,7 @@ class X3DMultiHead(BaseVideoModel):
         model = torch.hub.load(
             'facebookresearch/pytorchvideo',
             self.variant,
-            pretrained=self._pretrained
+            pretrained=False
         )
         return model
 
