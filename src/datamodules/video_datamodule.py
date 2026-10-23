@@ -23,7 +23,7 @@ class VideoDataModule(L.LightningDataModule):
             num_workers: int = 2,
             video_frame_size: int = 224,
             video_max_frames: int = 32,
-            aggressive_aug_threshold: int = 300,
+            num_optional_augmentations: int = 2,
     ):
         """
         Initialize VideoDataModule.
@@ -36,7 +36,7 @@ class VideoDataModule(L.LightningDataModule):
         :param num_workers: Number of workers for data loading.
         :param video_frame_size: Size of video frames.
         :param video_max_frames: Maximum number of frames per video.
-        :param aggressive_aug_threshold: Threshold for augmentations.
+        :param num_optional_augmentations: Maximum number of optional augmentations.
         """
         super().__init__()
         self._train_lmdb_path = Path(train_lmdb_path)
@@ -47,7 +47,7 @@ class VideoDataModule(L.LightningDataModule):
         self._num_workers = num_workers
         self._video_frame_size = video_frame_size
         self._video_max_frames = video_max_frames
-        self._aggressive_aug_threshold = aggressive_aug_threshold
+        self._num_optional_augmentations = num_optional_augmentations
 
         self._train_dataset = None
         self._val_dataset = None
@@ -71,7 +71,7 @@ class VideoDataModule(L.LightningDataModule):
                 is_train=True,
                 video_frame_size=self._video_frame_size,
                 video_max_frames=self._video_max_frames,
-                aggressive_aug_threshold=self._aggressive_aug_threshold
+                num_optional_augmentations=self._num_optional_augmentations
             )
             self._val_dataset = VideoDataset(
                 self._val_lmdb_path,
@@ -79,7 +79,7 @@ class VideoDataModule(L.LightningDataModule):
                 is_train=False,
                 video_frame_size=self._video_frame_size,
                 video_max_frames=self._video_max_frames,
-                aggressive_aug_threshold=self._aggressive_aug_threshold
+                num_optional_augmentations=self._num_optional_augmentations
             )
 
         if stage == "test" or stage is None:
@@ -98,7 +98,8 @@ class VideoDataModule(L.LightningDataModule):
             batch_size=self._batch_size,
             shuffle=True,
             num_workers=self._num_workers,
-            pin_memory=True
+            pin_memory=True,
+            persistent_workers=(self._num_workers > 0)
         )
 
     def val_dataloader(self):
@@ -107,7 +108,8 @@ class VideoDataModule(L.LightningDataModule):
             batch_size=self._batch_size,
             shuffle=False,
             num_workers=self._num_workers,
-            pin_memory=True
+            pin_memory=True,
+            persistent_workers = (self._num_workers > 0)
         )
 
     def test_dataloader(self):
@@ -117,6 +119,7 @@ class VideoDataModule(L.LightningDataModule):
                 batch_size=self._batch_size,
                 shuffle=False,
                 num_workers=self._num_workers,
-                pin_memory=True
+                pin_memory=True,
+                persistent_workers = (self._num_workers > 0)
             )
         return None

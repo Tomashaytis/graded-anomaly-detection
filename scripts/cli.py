@@ -185,7 +185,7 @@ def train(
         num_workers=config['training']['num_workers'],
         video_frame_size=config['data']['video_frame_size'],
         video_max_frames=config['data']['video_max_frames'],
-        aggressive_aug_threshold=config['training']['aggressive_aug_threshold'],
+        num_optional_augmentations=config['training']['num_optional_augmentations'],
     )
 
     # Load annotations for num_classes
@@ -326,7 +326,8 @@ def evaluate(
 
     L.seed_everything(config['training']['seed'], workers=True)
 
-    eval_dir = Path(config['paths']['output_dir']) / 'results' / f'eval_{preset_name}_{checkpoint_path.stem}'
+    mode_alias = 'mh' if model_config['multi_head_mode'] else 'sh'
+    eval_dir = Path(config['paths']['output_dir']) / 'results' / mode_alias / f'eval_{preset_name}_{checkpoint_path.stem}'
     eval_dir.mkdir(parents=True, exist_ok=True)
 
     # DataModule
@@ -339,7 +340,7 @@ def evaluate(
         num_workers=config['training']['num_workers'],
         video_frame_size=config['data']['video_frame_size'],
         video_max_frames=config['data']['video_max_frames'],
-        aggressive_aug_threshold=config['training']['aggressive_aug_threshold'],
+        num_optional_augmentations=config['training']['num_optional_augmentations'],
     )
 
     # Load annotations for class information

@@ -28,7 +28,6 @@ def create_model(
         model_name: str,
         num_classes: int,
         dropout: float = 0.5,
-        pretrained: bool = False,
         weights_path: str = None,
         freeze_backbone: bool = True,
 ) -> BaseVideoModel:
@@ -38,7 +37,6 @@ def create_model(
     :param model_name: Name of the model (e.g. 'i3d_r50', 'x3d_m').
     :param num_classes: Number of output classes.
     :param dropout: Dropout probability for classifier head.
-    :param pretrained: Whether to use pretrained weights from torch.hub.
     :param weights_path: Path to custom weights file (overrides pretrained).
     :param freeze_backbone: Whether to freeze backbone layers for transfer learning.
     :return: Instance of BaseVideoModel ready for training or evaluation.
@@ -55,7 +53,6 @@ def create_model(
     kwargs = {
         'num_classes': num_classes,
         'dropout': dropout,
-        'pretrained': pretrained,
         'weights_path': weights_path,
     }
     if variant is not None:

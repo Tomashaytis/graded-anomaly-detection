@@ -58,12 +58,17 @@ def create_complex_augmentations(n_frames: int = 32, size: int = 224, stride: in
     else:
         temporal_selectors = []
 
-
-    pipeline: List[BaseAugmentation] = [
-        random.choice(temporal_selectors),
-        RandomHorizontalFlip(p=0.5),
-        RandomGrayscale(p=0.2),
-    ]
+    if len(temporal_selectors) > 0:
+        pipeline: List[BaseAugmentation] = [
+            random.choice(temporal_selectors),
+            RandomHorizontalFlip(p=0.5),
+            RandomGrayscale(p=0.2),
+        ]
+    else:
+        pipeline: List[BaseAugmentation] = [
+            RandomHorizontalFlip(p=0.5),
+            RandomGrayscale(p=0.2),
+        ]
 
     optional_pool = [
         RandomResizedCrop(size, scale=(0.8, 1.0)),
