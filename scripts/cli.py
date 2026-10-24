@@ -420,11 +420,19 @@ def evaluate(
 
     # Compute detailed metrics from collected predictions
     detailed_metrics = metrics_callback.compute_metrics()
+
     all_results = {**results_dict, **detailed_metrics}
 
+    if model_config['multi_head_mode']:
+        per_class_key = 'head2_per_class_metrics'
+        cm_key = 'head2_confusion_matrix_normalized'
+    else:
+        per_class_key = 'per_class_metrics'
+        cm_key = 'confusion_matrix_normalized'
+
     # Save per-class metrics
-    if detailed_metrics.get('per_class_metrics'):
-        per_class_df = pd.DataFrame(detailed_metrics['per_class_metrics'])
+    if detailed_metrics.get(per_class_key):
+        per_class_df = pd.DataFrame(detailed_metrics[per_class_key])
         per_class_df.to_csv(eval_dir / 'per_class_metrics.csv', index=False)
 
         plot_per_class_accuracy(per_class_df, eval_dir)
@@ -433,13 +441,28 @@ def evaluate(
         plot_support_vs_f1(per_class_df, eval_dir)
         plot_metrics_heatmap(per_class_df, eval_dir)
 
-        if detailed_metrics.get('confusion_matrix_normalized'):
+        if detailed_metrics.get(cm_key):
             plot_confusion_matrix(
-                np.array(detailed_metrics['confusion_matrix_normalized']),
+                np.array(detailed_metrics[cm_key]),
                 class_names,
                 num_classes,
                 eval_dir
             )
+
+    # Sanitizing
+    def sanitize(obj):
+        if isinstance(obj, float):
+            if np.isnan(obj):
+                return "nan"
+            if np.isinf(obj):
+                return "inf" if obj > 0 else "-inf"
+        if isinstance(obj, dict):
+            return {k: sanitize(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [sanitize(v) for v in obj]
+        return obj
+
+    all_results = sanitize(all_results)
 
     # Save all results
     with open(eval_dir / 'test_results.yaml', 'w') as f:
