@@ -8,6 +8,7 @@ import pandas as pd
 from torch.utils.data import DataLoader
 
 from src.dataset import VideoDataset
+from src.utils import worker_init_fn
 
 
 class VideoDataModule(L.LightningDataModule):
@@ -99,7 +100,8 @@ class VideoDataModule(L.LightningDataModule):
             shuffle=True,
             num_workers=self._num_workers,
             pin_memory=True,
-            persistent_workers=(self._num_workers > 0)
+            worker_init_fn=worker_init_fn,
+            persistent_workers=False,
         )
 
     def val_dataloader(self):
@@ -109,7 +111,8 @@ class VideoDataModule(L.LightningDataModule):
             shuffle=False,
             num_workers=self._num_workers,
             pin_memory=True,
-            persistent_workers = (self._num_workers > 0)
+            worker_init_fn=worker_init_fn,
+            persistent_workers=False,
         )
 
     def test_dataloader(self):
@@ -120,6 +123,7 @@ class VideoDataModule(L.LightningDataModule):
                 shuffle=False,
                 num_workers=self._num_workers,
                 pin_memory=True,
-                persistent_workers = (self._num_workers > 0)
+                worker_init_fn=worker_init_fn,
+                persistent_workers=False,
             )
         return None

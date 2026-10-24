@@ -30,19 +30,29 @@ class RandomResizedCrop(BaseAugmentation):
     """Random resized crop for video."""
 
     def __init__(self, size: int | Tuple[int, int], scale: Tuple[float, float] = (0.08, 1.0),
-                 ratio: Tuple[float, float] = (3 / 4, 4 / 3)):
+                 ratio: Tuple[float, float] = (3 / 4, 4 / 3), rand: bool = True):
         """
         Initialize random resized crop augmentation.
 
         :param size: Target output size (height, width). If int, same for both dimensions
         :param scale: Range of scaling factor relative to original area
         :param ratio: Range of aspect ratio
+        :param rand: If True, use random crop; if False, use centered crop
         """
         self._size = size if isinstance(size, tuple) else (size, size)
         self._scale = scale
         self._ratio = ratio
+        self._rand = rand
 
     def apply(self, video: torch.Tensor) -> torch.Tensor:
+        if not self._rand:
+            cropped = self.center_crop(video)
+            if (cropped.shape[-2], cropped.shape[-1]) != self._size:
+                cropped = F.interpolate(
+                    cropped, size=self._size, mode='bilinear', align_corners=False
+                )
+            return cropped
+
         _, _, h, w = video.shape
         area = h * w
         for _ in range(10):
@@ -57,7 +67,7 @@ class RandomResizedCrop(BaseAugmentation):
                 return F.interpolate(cropped, size=self._size, mode='bilinear', align_corners=False)
         return self.center_crop(video)
 
-    def center_crop(self, video):
+    def center_crop(self, video: torch.Tensor) -> torch.Tensor:
         """
         Center crop helper method.
 

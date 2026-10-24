@@ -1,7 +1,7 @@
 """
 Video Dataset Module
 """
-
+import random
 import torch
 
 from typing import Tuple
@@ -40,10 +40,35 @@ class VideoDataset(torch.utils.data.Dataset):
         """
         self._reader = LMDBReader(lmdb_path)
         self._class_counts = class_counts
-        self._is_train = is_train
         self._video_frame_size = video_frame_size
         self._video_max_frames = video_max_frames
         self._num_optional_augmentations = num_optional_augmentations
+        self._is_train = is_train
+
+        sample = self._reader.get(0)
+        video = sample['video']
+
+        self._source_n_frames = video.shape[1]
+        self._source_size = min(video.shape[2], video.shape[3])
+
+        self._transforms = create_complex_augmentations(
+            current_n_frames=self._source_n_frames,
+            current_size=self._source_size,
+            target_n_frames=self._video_max_frames,
+            target_size=self._video_frame_size,
+            num_optional_augmentations=self._num_optional_augmentations,
+            only_required=(not self._is_train)
+        )
+
+    def reset_transforms(self) -> None:
+        self._transforms = create_complex_augmentations(
+            current_n_frames=self._source_n_frames,
+            current_size=self._source_size,
+            target_n_frames=self._video_max_frames,
+            target_size=self._video_frame_size,
+            num_optional_augmentations=self._num_optional_augmentations,
+            only_required=(not self._is_train)
+        )
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int, float]:
         """
@@ -57,14 +82,7 @@ class VideoDataset(torch.utils.data.Dataset):
         level = LEVEL_MAP[data['level']]
         video = data['video']
 
-        if self._is_train:
-            transforms = create_complex_augmentations(
-                n_frames=self._video_max_frames,
-                size=self._video_frame_size,
-                stride=video.shape[1] / self._video_max_frames,
-                num_optional_augmentations=self._num_optional_augmentations
-            )
-            video = transforms(video)
+        video = self._transforms(video)
 
         return video, label, level
 

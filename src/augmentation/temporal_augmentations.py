@@ -8,15 +8,19 @@ from .base_augmentation import BaseAugmentation
 
 
 class TemporalRandomCrop(BaseAugmentation):
-    """Random crop along temporal dimension for video."""
+    """Crop a clip of fixed temporal length from a video (random or centered)."""
 
-    def __init__(self, clip_length: int):
+    def __init__(self, clip_length: int, rand: bool = True):
         """
-        Initialize temporal random crop augmentation.
+        Initialize temporal crop augmentation.
 
         :param clip_length: Target length of video clip after cropping
+        :param rand: If True, crop start is random; if False, crop is centered
         """
+        if clip_length < 1:
+            raise ValueError(f"clip_length must be >= 1, got {clip_length}")
         self._clip_length = clip_length
+        self._rand = rand
 
     def apply(self, video: torch.Tensor) -> torch.Tensor:
         C, T, H, W = video.shape
@@ -25,7 +29,11 @@ class TemporalRandomCrop(BaseAugmentation):
             video = video.repeat(1, repeat_factor, 1, 1)
             T = video.shape[1]
 
-        start = random.randint(0, T - self._clip_length)
+        if self._rand:
+            start = random.randint(0, T - self._clip_length)
+        else:
+            start = (T - self._clip_length) // 2
+
         return video[:, start:start + self._clip_length, :, :]
 
 
@@ -152,16 +160,21 @@ class SpeedChange(BaseAugmentation):
 class TemporalStrideSample(BaseAugmentation):
     """Keep every 2nd frame with a random offset (0 or 1), halving temporal length."""
 
-    def __init__(self, stride: int = 2):
+    def __init__(self, stride: int = 2, rand: bool = True):
         """
         Initialize temporal stride sample augmentation.
 
         :param stride: Stride value for sampling
+        :param rand: If True, offset selecting is random; if False, offset equals zero
         """
+        if stride < 1:
+            raise ValueError(f"stride must be >= 1, got {stride}")
+
         self._stride = stride
+        self._rand = rand
 
     def apply(self, video: torch.Tensor) -> torch.Tensor:
-        offset = random.randint(0, self._stride - 1)
+        offset = random.randint(0, self._stride - 1) if self._rand else 0
         return video[:, offset::self._stride, :, :]
 
 class TemporalStridePick(BaseAugmentation):
