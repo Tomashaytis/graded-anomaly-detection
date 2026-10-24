@@ -45,31 +45,6 @@ class VideoDataset(torch.utils.data.Dataset):
         self._num_optional_augmentations = num_optional_augmentations
         self._is_train = is_train
 
-        sample = self._reader.get(0)
-        video = sample['video']
-
-        self._source_n_frames = video.shape[1]
-        self._source_size = min(video.shape[2], video.shape[3])
-
-        self._transforms = create_complex_augmentations(
-            current_n_frames=self._source_n_frames,
-            current_size=self._source_size,
-            target_n_frames=self._video_max_frames,
-            target_size=self._video_frame_size,
-            num_optional_augmentations=self._num_optional_augmentations,
-            only_required=(not self._is_train)
-        )
-
-    def reset_transforms(self) -> None:
-        self._transforms = create_complex_augmentations(
-            current_n_frames=self._source_n_frames,
-            current_size=self._source_size,
-            target_n_frames=self._video_max_frames,
-            target_size=self._video_frame_size,
-            num_optional_augmentations=self._num_optional_augmentations,
-            only_required=(not self._is_train)
-        )
-
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int, float]:
         """
         Load and augment video by index.
@@ -82,7 +57,20 @@ class VideoDataset(torch.utils.data.Dataset):
         level = LEVEL_MAP[data['level']]
         video = data['video']
 
-        video = self._transforms(video)
+        source_n_frames = video.shape[1]
+        source_size = min(video.shape[2], video.shape[3])
+
+        transforms = create_complex_augmentations(
+            current_n_frames=source_n_frames,
+            current_size=source_size,
+            target_n_frames=self._video_max_frames,
+            target_size=self._video_frame_size,
+            num_optional_augmentations=self._num_optional_augmentations,
+            only_required=(not self._is_train)
+        )
+
+
+        video = transforms(video)
 
         return video, label, level
 

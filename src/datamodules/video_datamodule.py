@@ -8,7 +8,6 @@ import pandas as pd
 from torch.utils.data import DataLoader
 
 from src.dataset import VideoDataset
-from src.utils import worker_init_fn
 
 
 class VideoDataModule(L.LightningDataModule):
@@ -61,7 +60,6 @@ class VideoDataModule(L.LightningDataModule):
 
     def setup(self, stage: Optional[str] = None):
         """Set up datasets. Called on every GPU."""
-        # Load class counts from annotations
         annotations_df = pd.read_csv(self._annotations_train_path)
         self._class_counts = annotations_df['label_id'].value_counts().to_dict()
 
@@ -100,8 +98,7 @@ class VideoDataModule(L.LightningDataModule):
             shuffle=True,
             num_workers=self._num_workers,
             pin_memory=True,
-            worker_init_fn=worker_init_fn,
-            persistent_workers=False,
+            persistent_workers=(self._num_workers > 0),
         )
 
     def val_dataloader(self):
@@ -111,8 +108,7 @@ class VideoDataModule(L.LightningDataModule):
             shuffle=False,
             num_workers=self._num_workers,
             pin_memory=True,
-            worker_init_fn=worker_init_fn,
-            persistent_workers=False,
+            persistent_workers=(self._num_workers > 0),
         )
 
     def test_dataloader(self):
@@ -123,7 +119,6 @@ class VideoDataModule(L.LightningDataModule):
                 shuffle=False,
                 num_workers=self._num_workers,
                 pin_memory=True,
-                worker_init_fn=worker_init_fn,
-                persistent_workers=False,
+                persistent_workers=(self._num_workers > 0),
             )
         return None
