@@ -3,33 +3,34 @@ import numpy as np
 from abc import ABC, abstractmethod
 from typing import List, Tuple
 
-# Универсальный формат детекции
-DETECTION = Tuple[float, float, float, float, float, int]  # x1, y1, x2, y2, confidence, class_id
-TRACK = Tuple[int, float, float, float, float, float, int]  # track_id, x1, y1, x2, y2, confidence, class_id
+DETECTION = Tuple[float, float, float, float, float, int]
+TRACK = Tuple[int, float, float, float, float, float, int]
 
 
 class BaseTracker(ABC):
-    """Абстрактный базовый класс для всех трекеров"""
+    """Abstract base class for all trackers."""
 
     def __init__(self, **kwargs):
-        self.tracker = None
-        self.tracker_id = 0
+        """
+        Initialize the base tracker.
+
+        :param kwargs: tracker parameters (forwarded by subclasses)
+        """
+        self._tracker = None
+        self._tracker_id = 0
 
     @abstractmethod
     def update(self, detections: List[DETECTION], frame: np.ndarray) -> List[TRACK]:
         """
-        Обновляет трекер новыми детекциями
+        Update the tracker with new detections.
 
-        Args:
-            detections: список детекций в формате (x1, y1, x2, y2, confidence, class_id)
-            frame: текущий кадр (для некоторых трекеров)
-
-        Returns:
-            список треков в формате (track_id, x1, y1, x2, y2, confidence, class_id)
+        :param detections: list of detections (x1, y1, x2, y2, confidence, class_id)
+        :param frame: current frame (BGR, uint8); used by some trackers only
+        :return: list of tracks (track_id, x1, y1, x2, y2, confidence, class_id)
         """
         pass
 
     @abstractmethod
     def reset(self):
-        """Сбрасывает трекер"""
+        """Reset the tracker to its initial state."""
         pass

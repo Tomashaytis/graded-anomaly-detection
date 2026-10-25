@@ -5,19 +5,17 @@ from .deep_sort_adapter import DeepSORTAdapter
 
 
 class TrackerFactory:
-    """Фабрика для создания трекеров"""
+    """Factory for creating tracker instances."""
 
     @staticmethod
     def create_tracker(tracker_type: str, **kwargs) -> BaseTracker:
         """
-        Создаёт трекер указанного типа
+        Create a tracker of the given type.
 
-        Args:
-            tracker_type: 'bytetrack', 'botsort', 'deepsort'
-            **kwargs: параметры для конкретного трекера
-
-        Returns:
-            экземпляр трекера
+        :param tracker_type: tracker name — 'bytetrack', 'botsort' or 'deepsort'
+        :param kwargs: parameters forwarded to the tracker constructor
+        :return: tracker instance
+        :raises ValueError: if the tracker type is unknown
         """
         trackers = {
             'bytetrack': ByteTrackAdapter,
@@ -26,6 +24,8 @@ class TrackerFactory:
         }
 
         if tracker_type not in trackers:
-            raise ValueError(f"Неизвестный тип трекера: {tracker_type}. Доступны: {list(trackers.keys())}")
+            available = ', '.join(trackers.keys())
+            raise ValueError(f"Unknown tracker type: {tracker_type}. "
+                             f"Available: {available}")
 
         return trackers[tracker_type](**kwargs)

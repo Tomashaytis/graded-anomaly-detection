@@ -2,37 +2,44 @@ import numpy as np
 import supervision as sv
 
 from typing import List
+from trackers import ByteTrackTracker
 
 from .base_tracker import BaseTracker, DETECTION, TRACK
 
 
 class ByteTrackAdapter(BaseTracker):
-    """Адаптер для ByteTrack (через supervision)"""
+    """Adapter for ByteTrack (via supervision)."""
 
     def __init__(self, **kwargs):
+        """
+        Initialize the ByteTrack tracker.
+
+        :param kwargs: parameters forwarded to ByteTrackTracker
+        """
         super().__init__(**kwargs)
-        self.tracker = sv.ByteTrack(**kwargs)
+        self.tracker = ByteTrackTracker(**kwargs)
 
     def update(self, detections: List[DETECTION], frame: np.ndarray) -> List[TRACK]:
-        # Конвертируем в формат supervision
         if not detections:
-            return []
+            empty_detections = sv.Detections(
+                xyxy=np.empty((0, 4), dtype=np.float32),
+                confidence=np.empty(0, dtype=np.float32),
+                class_id=np.empty(0, dtype=int),
+            )
+            tracked_detections = self.tracker.update(empty_detections)
+        else:
+            xyxy = np.array([d[:4] for d in detections])
+            confidence = np.array([d[4] for d in detections])
+            class_id = np.array([d[5] for d in detections])
 
-        xyxy = np.array([d[:4] for d in detections])
-        confidence = np.array([d[4] for d in detections])
-        class_id = np.array([d[5] for d in detections])
+            sv_detections = sv.Detections(
+                xyxy=xyxy,
+                confidence=confidence,
+                class_id=class_id
+            )
 
-        # Создаём объект Detections
-        sv_detections = sv.Detections(
-            xyxy=xyxy,
-            confidence=confidence,
-            class_id=class_id
-        )
+            tracked_detections = self.tracker.update(sv_detections)
 
-        # Обновляем трекер
-        tracked_detections = self.tracker.update_with_detections(sv_detections)
-
-        # Конвертируем обратно в единый формат
         tracks = []
         for i in range(len(tracked_detections)):
             track_id = tracked_detections.tracker_id[i]
@@ -44,4 +51,4 @@ class ByteTrackAdapter(BaseTracker):
         return tracks
 
     def reset(self):
-        self.tracker = sv.ByteTrack()
+        self.tracker = ByteTrackTracker()

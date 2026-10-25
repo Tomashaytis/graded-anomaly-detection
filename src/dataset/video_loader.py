@@ -70,7 +70,6 @@ class VideoLoader:
         cap = cv2.VideoCapture(str(self.video_path))
 
         try:
-            # Set starting position
             cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
 
             frame_num = start_frame

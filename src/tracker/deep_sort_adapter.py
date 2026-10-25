@@ -7,20 +7,24 @@ from .base_tracker import BaseTracker, DETECTION, TRACK
 
 
 class DeepSORTAdapter(BaseTracker):
-    """Адаптер для DeepOcSort из библиотеки boxmot"""
+    """Adapter for DeepOcSort from the boxmot library."""
 
     def __init__(self, **kwargs):
+        """
+        Initialize the DeepOcSort tracker.
+
+        :param kwargs: tracker parameters. Recognized keys:
+            model_weights, fp16, device, max_dist, max_iou_dist,
+            max_age, n_init, nn_budget, mc_lambda, ema_alpha, per_class
+        """
         super().__init__(**kwargs)
 
-        # Сохраняем параметры для сброса
         self._init_params = kwargs.copy()
 
-        # ВАЖНО: DeepOcSort ожидает параметры с именами reid_weights и half
-        reid_weights = kwargs.get('model_weights', None)  # переименовываем
-        half = kwargs.get('fp16', False)  # переименовываем
+        reid_weights = kwargs.get('model_weights', None)
+        half = kwargs.get('fp16', False)
         device = kwargs.get('device', 'cpu')
 
-        # Параметры трекера с значениями по умолчанию
         max_dist = kwargs.get('max_dist', 0.2)
         max_iou_dist = kwargs.get('max_iou_dist', 0.7)
         max_age = kwargs.get('max_age', 30)
@@ -29,13 +33,6 @@ class DeepSORTAdapter(BaseTracker):
         mc_lambda = kwargs.get('mc_lambda', 0.995)
         ema_alpha = kwargs.get('ema_alpha', 0.9)
         per_class = kwargs.get('per_class', False)
-
-        print(f"Инициализация DeepOcSort с параметрами:")
-        print(f"  - ReID модель: {reid_weights}")
-        print(f"  - Устройство: {device}")
-        print(f"  - Half (FP16): {half}")
-        print(f"  - max_age: {max_age}")
-        print(f"  - n_init: {n_init}")
 
         self.tracker = DeepOcSort(
             reid_weights=reid_weights,
@@ -52,18 +49,6 @@ class DeepSORTAdapter(BaseTracker):
         )
 
     def update(self, detections: List[DETECTION], frame: np.ndarray) -> List[TRACK]:
-        """
-        Обновление трекера
-
-        Args:
-            detections: список детекций [x1, y1, x2, y2, conf, cls]
-            frame: текущий кадр
-
-        Returns:
-            список треков [track_id, x1, y1, x2, y2, conf, cls]
-        """
-
-        # Конвертируем детекции в формат boxmot
         if detections:
             boxmot_dets = np.array([
                 [d[0], d[1], d[2], d[3], d[4], d[5]]
@@ -72,10 +57,8 @@ class DeepSORTAdapter(BaseTracker):
         else:
             boxmot_dets = np.empty((0, 6), dtype=np.float32)
 
-        # Обновляем трекер
         tracks = self.tracker.update(boxmot_dets, frame)
 
-        # Конвертируем результат
         result = []
         if tracks is not None and len(tracks) > 0:
             for track in tracks:
@@ -95,10 +78,6 @@ class DeepSORTAdapter(BaseTracker):
         return result
 
     def reset(self):
-        """Сброс трекера"""
-        print("Сброс DeepOcSort трекера...")
-
-        # В reset тоже используем правильные имена параметров
         reid_weights = self._init_params.get('model_weights', None)
         half = self._init_params.get('fp16', False)
         device = self._init_params.get('device', 'cpu')

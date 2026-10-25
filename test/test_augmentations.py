@@ -57,11 +57,7 @@ def test():
         video_tensor = loader.to_tensor(max_frames=64, resize_size=(224, 224), sampling_strategy='uniform')
 
         # Composite augmentations
-        visualize_video_augmentation(video_tensor, create_complex_augmentations())
-        visualize_video_augmentation(video_tensor, create_complex_augmentations())
-        visualize_video_augmentation(video_tensor, create_complex_augmentations())
-        visualize_video_augmentation(video_tensor, create_complex_augmentations())
-        visualize_video_augmentation(video_tensor, create_complex_augmentations())
+        visualize_video_augmentation(video_tensor, create_complex_augmentations(current_n_frames=64, current_size=224))
 
         # Spatial augmentations
         visualize_video_augmentation(video_tensor, RandomHorizontalFlip(p=1))
