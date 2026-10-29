@@ -14,7 +14,19 @@ training:
 
 # Model configuration
 model:
-  preset: "timesformer_mh"  # i3d_r50, slowfast_r50, x3d_xs, x3d_s, x3d_m, x3d_l, i3d_r50_mh, slowfast_r50_mh, x3d_m_mh, timesformer_mh
+  preset: "timesformer_mh"
+  available_presets:
+    - i3d_r50
+    - slowfast_r50
+    - x3d_xs
+    - x3d_s
+    - x3d_m
+    - x3d_l
+    - timesformer
+    - i3d_r50_mh
+    - slowfast_r50_mh
+    - x3d_m_mh
+    - timesformer_mh
 
 # Model presets
 model_presets:
@@ -26,6 +38,15 @@ model_presets:
     dropout: 0.5
     batch_size: 4
     accumulate_grad_batches: 4
+
+  slowfast_r50:
+    name: "slowfast_r50"
+    multi_head_mode: false
+    weights_path: "models/3d-cnn/SLOWFAST_8x8_R50.pyth"
+    freeze_backbone: true
+    dropout: 0.5
+    batch_size: 4
+    accumulate_grad_batches: 8
 
   x3d_xs:
     name: "x3d_xs"
@@ -63,14 +84,14 @@ model_presets:
     batch_size: 2
     accumulate_grad_batches: 16
 
-  slowfast_r50:
-    name: "slowfast_r50"
+  timesformer:
+    name: "timesformer"
     multi_head_mode: false
-    weights_path: "models/3d-cnn/SLOWFAST_8x8_R50.pyth"
+    weights_path: "models/transformer/timesformer"
     freeze_backbone: true
     dropout: 0.5
-    batch_size: 4
-    accumulate_grad_batches: 8
+    batch_size: 2
+    accumulate_grad_batches: 16
 
   i3d_r50_mh:
     name: "i3d_r50_mh"
