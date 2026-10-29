@@ -199,18 +199,22 @@ class MetricsCallback(L.Callback):
 
             # Confusion matrix by levels (0.0 / 0.4 / 0.7 / 1.0)
             levels_unique = np.array([0.0, 0.4, 0.7, 1.0])
+            level_to_class = {0.0: 0, 0.4: 1, 0.7: 2, 1.0: 3}
 
             def snap(pred):
-                return levels_unique[np.argmin(np.abs(levels_unique - pred))]
+                return float(levels_unique[np.argmin(np.abs(levels_unique - pred))])
 
-            snapped_preds = np.array([snap(p) for p in severity_preds])
-            snapped_levels = np.array([snap(l) for l in levels])
+            snapped_preds_float = np.array([snap(p) for p in severity_preds])
+            snapped_levels_float = np.array([snap(l) for l in levels])
 
-            level_cm = confusion_matrix(snapped_levels, snapped_preds, labels=levels_unique)
+            snapped_preds_int = np.array([level_to_class[v] for v in snapped_preds_float])
+            snapped_levels_int = np.array([level_to_class[v] for v in snapped_levels_float])
+
+            level_cm = confusion_matrix(snapped_levels_int, snapped_preds_int, labels=[0, 1, 2, 3])
             level_cm_normalized = level_cm.astype('float') / (level_cm.sum(axis=1)[:, np.newaxis] + 1e-10)
 
             # Level accuracy
-            level_accuracy = accuracy_score(snapped_levels, snapped_preds)
+            level_accuracy = accuracy_score(snapped_levels_int, snapped_preds_int)
 
             metrics.update({
                 'head1_mae': float(mae),
