@@ -14,7 +14,7 @@ class ByteTrackAdapter(BaseTracker):
         """
         Initialize the ByteTrack tracker.
 
-        :param kwargs: parameters forwarded to ByteTrackTracker
+        :param kwargs: Parameters forwarded to ByteTrackTracker
         """
         super().__init__(**kwargs)
         self.tracker = ByteTrackTracker(**kwargs)

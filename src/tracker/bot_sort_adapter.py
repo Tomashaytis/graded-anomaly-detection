@@ -15,7 +15,7 @@ class BotSORTAdapter(BaseTracker):
         """
         Initialize the Bot-SORT tracker.
 
-        :param kwargs: tracker parameters. Recognized keys:
+        :param kwargs: Tracker parameters. Recognized keys:
             model_weights, fp16, device, with_reid, det_thresh,
             track_high_thresh, track_low_thresh, new_track_thresh,
             match_thresh, track_buffer, frame_rate, per_class
@@ -55,10 +55,10 @@ class BotSORTAdapter(BaseTracker):
         """
         Create the underlying BotSort instance.
 
-        :param reid_weights: path to the ReID model, or None to disable ReID
-        :param half: use FP16 inference
-        :param device: device string ('cpu', 'cuda', ...)
-        :param kwargs: additional tracker parameters
+        :param reid_weights: Path to the ReID model, or None to disable ReID.
+        :param half: Use FP16 inference.
+        :param device: Device string ('cpu', 'cuda', ...).
+        :param kwargs: Additional tracker parameters.
         """
         tracker_params = {
             'half': half,

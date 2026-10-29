@@ -13,7 +13,7 @@ class DeepSORTAdapter(BaseTracker):
         """
         Initialize the DeepOcSort tracker.
 
-        :param kwargs: tracker parameters. Recognized keys:
+        :param kwargs: Tracker parameters. Recognized keys:
             model_weights, fp16, device, max_dist, max_iou_dist,
             max_age, n_init, nn_budget, mc_lambda, ema_alpha, per_class
         """

@@ -12,10 +12,10 @@ class TrackerFactory:
         """
         Create a tracker of the given type.
 
-        :param tracker_type: tracker name — 'bytetrack', 'botsort' or 'deepsort'
-        :param kwargs: parameters forwarded to the tracker constructor
-        :return: tracker instance
-        :raises ValueError: if the tracker type is unknown
+        :param tracker_type: Tracker name — 'bytetrack', 'botsort' or 'deepsort'.
+        :param kwargs: Parameters forwarded to the tracker constructor.
+        :return: Tracker instance.
+        :raises ValueError: If the tracker type is unknown.
         """
         trackers = {
             'bytetrack': ByteTrackAdapter,

@@ -14,7 +14,7 @@ class BaseTracker(ABC):
         """
         Initialize the base tracker.
 
-        :param kwargs: tracker parameters (forwarded by subclasses)
+        :param kwargs: Tracker parameters (forwarded by subclasses).
         """
         self._tracker = None
         self._tracker_id = 0
@@ -24,9 +24,9 @@ class BaseTracker(ABC):
         """
         Update the tracker with new detections.
 
-        :param detections: list of detections (x1, y1, x2, y2, confidence, class_id)
-        :param frame: current frame (BGR, uint8); used by some trackers only
-        :return: list of tracks (track_id, x1, y1, x2, y2, confidence, class_id)
+        :param detections: List of detections (x1, y1, x2, y2, confidence, class_id).
+        :param frame: Current frame (BGR, uint8); used by some trackers only.
+        :return: List of tracks (track_id, x1, y1, x2, y2, confidence, class_id).
         """
         pass
 
