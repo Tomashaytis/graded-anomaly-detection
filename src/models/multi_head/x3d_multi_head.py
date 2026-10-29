@@ -125,7 +125,7 @@ class X3DMultiHead(BaseVideoModel):
                     param.requires_grad = True
 
     def _unfreeze_head(self) -> None:
-        """Unfreeze classifier head parameters for training."""
+        """Unfreeze head parameters for training."""
         for param in self.head1.parameters():
             param.requires_grad = True
         for param in self.head2.parameters():

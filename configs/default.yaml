@@ -1,9 +1,9 @@
 # Training configuration
 training:
-  num_epochs: 20
+  num_epochs: 15
   batch_size: 8
   num_workers: 2
-  learning_rate: 0.0001
+  learning_rate: 0.00005
   weight_decay: 0.001
   label_smoothing: 0.1
   accumulate_grad_batches: 4
@@ -14,7 +14,7 @@ training:
 
 # Model configuration
 model:
-  preset: "x3d_m_mh"  # i3d_r50, slowfast_r50, x3d_xs, x3d_s, x3d_m, x3d_l, i3d_r50_mh, slowfast_r50_mh, x3d_m_mh
+  preset: "timesformer_mh"  # i3d_r50, slowfast_r50, x3d_xs, x3d_s, x3d_m, x3d_l, i3d_r50_mh, slowfast_r50_mh, x3d_m_mh, timesformer_mh
 
 # Model presets
 model_presets:
@@ -99,10 +99,19 @@ model_presets:
     batch_size: 8
     accumulate_grad_batches: 4
 
+  timesformer_mh:
+    name: "timesformer_mh"
+    multi_head_mode: true
+    weights_path: "models/transformer/timesformer"
+    freeze_backbone: true
+    dropout: 0.5
+    batch_size: 2
+    accumulate_grad_batches: 16
+
 # Data configuration
 data:
   video_frame_size: 224
-  video_max_frames: 32
+  video_max_frames: 16
 
 # Paths
 paths:
@@ -112,10 +121,10 @@ paths:
   annotations_val: "data/dataset/annotations_val.csv"
   annotations_test: "data/dataset/annotations_test.csv"
   id2label: "data/dataset/id2label.json"
-  train_lmdb: "F:/Projects/actions-data/train_lmdb"
-  val_lmdb: "F:/Projects/actions-data/val_lmdb"
-  test_lmdb: "F:/Projects/actions-data/test_lmdb"
-  output_dir: "runs/model=X3D-M"
+  train_lmdb: "D:/Projects/actions-data/train_lmdb"
+  val_lmdb: "D:/Projects/actions-data/val_lmdb"
+  test_lmdb: "D:/Projects/actions-data/test_lmdb"
+  output_dir: "runs/model=TimeSformer"
   checkpoint: "runs/model=I3D-8x8-R50/run-4 (mh)/checkpoints/best-epoch=09-val_acc2_mh=0.824.ckpt"
 
 # Logging
