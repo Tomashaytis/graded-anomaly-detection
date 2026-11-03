@@ -18,7 +18,7 @@ if __name__ == '__main__':
     with open(DEFAULT_CONFIG_PATH, 'r') as f:
         config = yaml.safe_load(f)
 
-    eval_dir = Path(config['paths']['output_dir']) / 'results' / EVAL_FOLDER
+    eval_dir = Path(config['paths']['output_dir']) / 'results' / 'sh' / EVAL_FOLDER
 
     annotations_df = pd.read_csv(config['paths']['annotations_train'])
     label_category_mapping = annotations_df[['label_id', 'category']].drop_duplicates()

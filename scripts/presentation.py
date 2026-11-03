@@ -8,9 +8,9 @@ from math import pi
 from pathlib import Path
 
 MODEL_EVAL_DIRS = {
-    'I3D': Path('runs') / 'model=I3D-8x8-R50' / 'results' / 'eval_i3d_r50_best-epoch=08-val_acc=0.787',
-    'SlowFast': Path('runs') / 'model=SlowFast-8x8-R50' / 'results' / 'eval_slowfast_r50_best-epoch=10-val_acc=0.774',
-    'X3D-M': Path('runs') / 'model=X3D-M' / 'results' / 'eval_x3d_m_best-epoch=18-val_acc=0.775',
+    'I3D': Path('../runs') / 'model=I3D-8x8-R50' / 'results' / 'sh' / 'eval_i3d_r50_best-epoch=08-val_acc=0.787',
+    'SlowFast': Path('../runs') / 'model=SlowFast-8x8-R50' / 'results' / 'sh' / 'eval_slowfast_r50_best-epoch=10-val_acc=0.774',
+    'X3D-M': Path('../runs') / 'model=X3D-M' / 'results' / 'sh' / 'eval_x3d_m_best-epoch=18-val_acc=0.775',
 }
 METRICS_DATA = {
     'I3D-8x8-R50': {
@@ -54,7 +54,7 @@ TRANSLATION = {
         'normal': 'Нормальное поведение'
     }
 
-SAVE_DIR = Path('docs') / 'Рисунки'
+SAVE_DIR = Path('../docs') / 'Статья' / 'Рисунки'
 
 
 if __name__ == '__main__':
@@ -89,6 +89,43 @@ if __name__ == '__main__':
     ax.tick_params(axis='y', labelsize=14)
     ax.tick_params(axis='x', labelsize=14)
     ax.set_title('Средний F1-score обученных моделей по категориям действий', fontsize=16, fontweight='bold')
+    ax.legend(loc='lower right', frameon=True, fontsize=14)
+    ax.grid(axis='x', alpha=0.3, linestyle='--')
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    plt.tight_layout()
+    plt.savefig(SAVE_DIR / 'model_comparison.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    model_data = {}
+    for model_name, eval_dir in MODEL_EVAL_DIRS.items():
+        df = pd.read_csv(eval_dir / 'category_metrics.csv')
+        model_data[model_name] = df.set_index('category')['avg_f1']
+
+    # F1-score для 3 моделей по категориям (eng)
+    plot_df = pd.DataFrame(model_data).sort_index()
+
+    plt.rcParams['font.family'] = 'serif'
+    fig, ax = plt.subplots(figsize=(19, 8))
+
+    plot_df.plot(kind='barh', ax=ax, width=0.7,
+                 color=['#2E86AB', '#A23B72', '#6A994E'],
+                 edgecolor='black', linewidth=0.5)
+
+    for i in range(len(plot_df)):
+        for j, model in enumerate(plot_df.columns):
+            val = plot_df.iloc[i, j]
+            if val > 0.05:
+                ax.text(val + 0.01, i - 0.25 + j * 0.23, f'{val:.3f}',
+                        va='center', fontsize=12)
+    ax.set_xlim(0, 1)
+    ax.set_xticks([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+    ax.set_xlabel('Average F1-score', fontsize=14)
+    ax.set_ylabel('')
+    ax.tick_params(axis='y', labelsize=14)
+    ax.tick_params(axis='x', labelsize=14)
+    ax.set_title('Average F1-score of trained models by action categories', fontsize=16, fontweight='bold')
     ax.legend(loc='lower right', frameon=True, fontsize=14)
     ax.grid(axis='x', alpha=0.3, linestyle='--')
     ax.spines['top'].set_visible(False)

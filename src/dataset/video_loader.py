@@ -18,7 +18,7 @@ class VideoLoader:
         """
         Initialize video loader.
 
-        :param video_path: path to video file
+        :param video_path: Path to video file.
         """
         self.video_path = Path(video_path)
         self._vr = VideoReader(str(self.video_path), ctx=cpu(0))
@@ -63,9 +63,9 @@ class VideoLoader:
         """
         Generator for sequential frame reading.
 
-        :param start_frame: starting frame (0-index)
-        :param end_frame: ending frame (exclusive)
-        :yield: frames in BGR format
+        :param start_frame: Starting frame (0-index)
+        :param end_frame: Ending frame (exclusive)
+        :yield: Frames in BGR format
         """
         cap = cv2.VideoCapture(str(self.video_path))
 
@@ -91,8 +91,8 @@ class VideoLoader:
         """
         Get a specific frame by number.
 
-        :param frame_num: frame number (0-index)
-        :return: frame in BGR format or None if read failed
+        :param Frame_num: frame number (0-index)
+        :return: Frame in BGR format or None if read failed
         """
         cap = cv2.VideoCapture(str(self.video_path))
 
@@ -108,8 +108,8 @@ class VideoLoader:
         """
         Get multiple frames by their numbers.
 
-        :param frame_nums: list of frame numbers
-        :return: list of frames (None if frame could not be read)
+        :param Frame_nums: list of frame numbers
+        :return: List of frames (None if frame could not be read)
         """
         frames = []
         cap = cv2.VideoCapture(str(self.video_path))
@@ -129,7 +129,7 @@ class VideoLoader:
         """
         Get complete video information.
 
-        :return: dictionary with video information
+        :return: Dictionary with video information.
         """
         return {
             'path': str(self.video_path),
@@ -146,9 +146,9 @@ class VideoLoader:
         """
         Detect near-black borders around the frame.
 
-        :param frame: BGR frame (uint8)
-        :param threshold: max channel value to consider a pixel black (0..255)
-        :return: (top, bottom, left, right) — number of pixels to crop from each side
+        :param frame: RGB frame (uint8)
+        :param threshold: Max channel value to consider a pixel black (0..255).
+        :return: (top, bottom, left, right) — number of pixels to crop from each side.
         """
         if frame.size == 0:
             return 0, 0, 0, 0
@@ -184,7 +184,8 @@ class VideoLoader:
     @staticmethod
     def reflect_pad_and_resize(frame: np.ndarray,
                                target_size: Tuple[int, int],
-                               crop_black: bool = True) -> np.ndarray:
+                               crop_black: bool = True,
+                               ratio_threshold = 1.5) -> np.ndarray:
         """
         Crop black borders, then bring the frame to the target aspect ratio:
         - if the frame is wider than the target — center-crop by width
@@ -192,8 +193,15 @@ class VideoLoader:
         - if the frame is taller than the target — reflect left/right
           (bilateral symmetry is preserved, so it looks natural).
         Finally resize to the target size.
+
+        :param frame: Frame for processing.
+        :param target_size: Target frame size.
+        :param crop_black: If True, crops black pixels on sides.
+        :param ratio_threshold: Ratio threshold.
+        :return: Processed tile.
         """
         target_h, target_w = target_size
+        print(crop_black)
 
         if crop_black:
             top, bottom, left, right = VideoLoader.detect_black_borders(frame)
@@ -208,7 +216,24 @@ class VideoLoader:
         target_ratio = target_w / target_h
         current_ratio = w / h
 
-        if current_ratio > target_ratio:
+        if target_ratio < current_ratio <= target_ratio * ratio_threshold:
+            new_w = min(int(round(h * target_ratio)), w)
+            x0 = (w - new_w) // 2
+            frame = frame[:, x0:x0 + new_w]
+        elif current_ratio > target_ratio * ratio_threshold:
+            n_tiles = int(np.ceil(current_ratio / (target_ratio * ratio_threshold)))
+            frame = np.tile(frame, (n_tiles, 1, 1))
+            h = h * n_tiles
+
+            seam_h = max(2, h // (n_tiles * 20))
+            for k in range(1, n_tiles):
+                y = k * (h // n_tiles)
+                y0 = max(0, y - seam_h)
+                y1 = min(h, y + seam_h)
+                band = frame[y0:y1]
+                if band.shape[0] >= 3:
+                    frame[y0:y1] = cv2.GaussianBlur(band, (1, 2 * seam_h + 1), 0)
+
             new_w = min(int(round(h * target_ratio)), w)
             x0 = (w - new_w) // 2
             frame = frame[:, x0:x0 + new_w]
@@ -229,14 +254,18 @@ class VideoLoader:
                   max_frames: Optional[int] = None,
                   resize_size: Optional[Tuple[int, int]] = None,
                   normalize: bool = True,
-                  sampling_strategy: str = 'first') -> torch.Tensor:
+                  sampling_strategy: str = 'first',
+                  crop_black: bool = True,
+                  ratio_threshold: float = 1.5) -> torch.Tensor:
         """
         Load video as tensor with flexible frame sampling.
 
         :param max_frames: maximum number of frames to load (None = all frames)
-        :param resize_size: resize to (height, width) if provided
-        :param normalize: normalize pixel values to [0, 1] if True
-        :param sampling_strategy: 'first', 'uniform', 'random_segment'
+        :param resize_size: resize to (height, width) if provided,
+        :param normalize: normalize pixel values to [0, 1] if True.
+        :param sampling_strategy: 'first', 'uniform', 'random_segment'.
+        :param crop_black: If True, crops black pixels on sides.
+        :param ratio_threshold: Ratio threshold.
         :return: tensor of shape [C, T, H, W]
         """
         total_frames = self._total_frames
@@ -259,7 +288,7 @@ class VideoLoader:
         processed = []
         for frame in frames:
             if resize_size is not None:
-                frame = VideoLoader.reflect_pad_and_resize(frame, resize_size)
+                frame = VideoLoader.reflect_pad_and_resize(frame, resize_size, crop_black, ratio_threshold)
             t = torch.from_numpy(frame).permute(2, 0, 1).float()
             if normalize:
                 t = t / 255.0

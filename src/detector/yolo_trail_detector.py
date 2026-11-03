@@ -100,7 +100,7 @@ class YoloTrailDetector:
             cap.release()
 
         if interpolate:
-            history = self._interpolate(history)
+            history = self._interpolate(history, start_frame=0, end_frame=frame_id, extend_edges=True)
 
         return history
 
@@ -185,12 +185,28 @@ class YoloTrailDetector:
         return detections
 
     @staticmethod
-    def _interpolate(tracks: Tracks, smooth_window: int = 5) -> Tracks:
+    def _interpolate(
+            tracks: Tracks,
+            smooth_window: int = 5,
+            start_frame: int = 0,
+            end_frame: Optional[int] = None,
+            extend_edges: bool = True,
+            min_segment_length = 10,
+    ) -> Tracks:
         """
-        Interpolate tracks with smoothing.
+        Interpolate tracks with smoothing, optionally extending them
+        to the full video range.
+
+        Inner gaps are filled by linear interpolation between the
+        smoothed bboxes before and after the gap. Edges are extended
+        by holding the first/last smoothed bbox constant.
 
         :param tracks: Tracks.
         :param smooth_window: Number of frames to smooth before/after a gap.
+        :param start_frame: First frame of the video (for edge extension).
+        :param end_frame: Last frame of the video, exclusive (None = no right extension).
+        :param extend_edges: If true, extend tracks to [start_frame, end_frame).
+        :param min_segment_length: Min segment length.
         :return: Interpolated tracks.
         """
         interpolated_tracks: Tracks = {}
@@ -198,28 +214,47 @@ class YoloTrailDetector:
         for track_id, track in tracks.items():
             if len(track) == 0:
                 continue
+
+            segments: list[list] = [[track[0]]]
+            for i in range(1, len(track)):
+                if track[i][0] == track[i - 1][0] + 1:
+                    segments[-1].append(track[i])
+                elif track[i][0] <= track[i - 1][0]:
+                    continue
+                else:
+                    segments.append([track[i]])
+
+            segments = [s for s in segments if len(s) >= min_segment_length]
+            if not segments:
+                continue
+
+            track = []
+            for seg in segments:
+                track.extend(seg)
+
             interpolated_track = [track[0]]
+
             for i in range(1, len(track)):
                 if track[i - 1][0] + 1 == track[i][0]:
                     interpolated_track.append(track[i])
                 elif track[i][0] <= track[i - 1][0]:
                     continue
                 else:
-                    # Сглаживаем bbox перед разрывом (последние smooth_window кадров)
+                    # Smooth bbox before the gap (last smooth_window frames)
                     prev_window = interpolated_track[-smooth_window:]
                     prev_x1 = np.median([p[1] for p in prev_window])
                     prev_y1 = np.median([p[2] for p in prev_window])
                     prev_x2 = np.median([p[3] for p in prev_window])
                     prev_y2 = np.median([p[4] for p in prev_window])
 
-                    # Сглаживаем bbox после разрыва (первые smooth_window кадров)
+                    # Smooth bbox after the gap (first smooth_window frames)
                     next_window = track[i:i + smooth_window]
                     next_x1 = np.median([p[1] for p in next_window])
                     next_y1 = np.median([p[2] for p in next_window])
                     next_x2 = np.median([p[3] for p in next_window])
                     next_y2 = np.median([p[4] for p in next_window])
 
-                    # Интерполируем между сглаженными bbox
+                    # Linear interpolation between smoothed bboxes
                     for f in range(track[i - 1][0] + 1, track[i][0]):
                         alpha = (f - track[i - 1][0]) / (track[i][0] - track[i - 1][0])
                         x1 = prev_x1 * (1 - alpha) + next_x1 * alpha
@@ -229,6 +264,32 @@ class YoloTrailDetector:
                         interpolated_track.append((f, x1, y1, x2, y2))
 
                     interpolated_track.append(track[i])
+
+            if extend_edges:
+                # Left edge: hold the first smoothed bbox constant
+                first = interpolated_track[0]
+                first_window = interpolated_track[:smooth_window]
+                lx1 = np.median([p[1] for p in first_window])
+                ly1 = np.median([p[2] for p in first_window])
+                lx2 = np.median([p[3] for p in first_window])
+                ly2 = np.median([p[4] for p in first_window])
+
+                left = [(f, lx1, ly1, lx2, ly2)
+                        for f in range(start_frame, first[0])]
+                interpolated_track = left + interpolated_track
+
+                # Right edge: hold the last smoothed bbox constant
+                if end_frame is not None:
+                    last = interpolated_track[-1]
+                    last_window = interpolated_track[-smooth_window:]
+                    rx1 = np.median([p[1] for p in last_window])
+                    ry1 = np.median([p[2] for p in last_window])
+                    rx2 = np.median([p[3] for p in last_window])
+                    ry2 = np.median([p[4] for p in last_window])
+
+                    right = [(f, rx1, ry1, rx2, ry2)
+                             for f in range(last[0] + 1, end_frame)]
+                    interpolated_track = interpolated_track + right
 
             interpolated_tracks[track_id] = interpolated_track
 

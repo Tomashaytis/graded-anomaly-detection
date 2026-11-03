@@ -69,7 +69,6 @@ class VideoDataset(torch.utils.data.Dataset):
             only_required=(not self._is_train)
         )
 
-
         video = transforms(video)
 
         return video, label, level

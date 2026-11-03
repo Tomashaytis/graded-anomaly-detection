@@ -2,10 +2,11 @@ from src.tracker import TrackerFactory
 from src.detector import YoloTrailDetector
 
 
+VIDEO_NAME = '001'
 MODEL_PATH = "../models/detector/yolo/yolov8n.pt"
-TEST_VIDEO = "../data/test.mp4"
-OUTPUT_VIDEO = "../data/trajectories.mp4"
-OUTPUT_TRAJECTORIES = "../data/trajectories.json"
+TEST_VIDEO = f"../data/test_traj/video/{VIDEO_NAME}.mp4"
+OUTPUT_VIDEO = f"../data/test_traj/video_traj/{VIDEO_NAME}.mp4"
+OUTPUT_TRAJECTORIES = f"../data/test_traj/traj/{VIDEO_NAME}.json"
 
 
 if __name__ == '__main__':
@@ -20,3 +21,4 @@ if __name__ == '__main__':
 
     tracks = detector.process_video(TEST_VIDEO, step=1)
     detector.render_video(TEST_VIDEO, OUTPUT_VIDEO, tracks)
+    detector.save_tracks(OUTPUT_TRAJECTORIES, tracks)
