@@ -35,7 +35,7 @@ if __name__ == '__main__':
         trail_detector.render_video(input_video_path, output_video_path, tracks)
         trail_detector.save_tracks(output_json_path, tracks)
 
-        groups = group_detector.process_tracks(output_json_path)
+        groups = group_detector.process_tracks(tracks)
         groups_sorted = [sorted(members) for _, members in sorted(groups.items())]
         groups_str = ", ".join(f"[{', '.join(map(str, g))}]" for g in groups_sorted)
         groups_lines.append(f"{video_name}: {groups_str}")

@@ -83,7 +83,8 @@ class LMDBCreator:
                             max_frames=max_frames,
                             resize_size=resize_size,
                             normalize=True,
-                            sampling_strategy='uniform'
+                            sampling_strategy='uniform',
+                            ratio_threshold=10,
                         )
                         video = (video * 255).to(torch.uint8)
 

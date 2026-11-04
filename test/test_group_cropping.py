@@ -32,7 +32,6 @@ N_TOP = 2
 N_RANDOM = 1
 SEED = 42
 
-# --- local crop selection ---
 MAX_LOCAL_SLOTS = 3
 MAX_AREA_RATIO = 0.8
 IOU_THRESH = 0.6
@@ -332,7 +331,6 @@ def main():
     meta_path = Path(OUTPUT_DIR) / "meta.json"
     meta_path.write_text(json.dumps(meta, indent=2))
 
-    # --- local crop selection: up to MAX_LOCAL_SLOTS per group ---
     cap = cv2.VideoCapture(VIDEO_PATH)
     frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))

@@ -23,6 +23,7 @@ class GroupCropper:
         padding: float = 0.1,
         n_top: int = 2,
         n_random: int = 1,
+        global_first: bool = False,
         seed: int = 42,
     ):
         """
@@ -32,27 +33,35 @@ class GroupCropper:
         :param padding: Bbox padding as a fraction of bbox size.
         :param n_top: Take this many largest groups by member count.
         :param n_random: Take this many random groups from the rest.
+        :param global_first: If True, add global crop at first position.
         :param seed: RNG seed for the random pick.
         """
         self._group_detector = group_detector
-        self._n_samples = n_frames
+        self._n_frames = n_frames
         self._size = size
         self._padding = padding
         self._n_top = n_top
         self._n_random = n_random
+        self._global_first = global_first
         self._seed = seed
 
-    def get_group_tensors(self, video_path: str, tracks_path: str) -> dict[int, torch.Tensor]:
+    def get_group_tensors(self, video_path: str, tracks: dict = None, tracks_path: str = None) -> dict[int, torch.Tensor]:
         """
         Build one tensor per selected group.
 
         :param video_path: Path to the source video.
+        :param tracks: Mapping track_id -> (N, 5) array of [frame_id, x1, y1, x2, y2].
         :param tracks_path: Path to the tracks JSON.
         :return: Mapping group_id -> tensor (n_samples, 3, size, size) in RGB, values in [0, 1].
-        :raises ValueError: If the video cannot be opened.
+        :raises ValueError: If the video cannot be opened or if tracks/tracks_path not set.
         """
-        tracks = self._load_tracks(tracks_path)
-        groups = list(self._group_detector.process_tracks(tracks_path).values())
+        if tracks is None and tracks_path is not None:
+            tracks = json.loads(Path(tracks_path).read_text())
+        elif tracks is None and tracks_path is None:
+            raise ValueError("Tracks or tracks path not set")
+        tracks = {int(tid): np.asarray(pts, dtype=np.float32) for tid, pts in tracks.items()}
+
+        groups = list(self._group_detector.process_tracks(tracks=tracks).values())
         if not groups:
             return {}
 
@@ -66,28 +75,25 @@ class GroupCropper:
         frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         result: dict[int, torch.Tensor] = {}
-        for gid, members in enumerate(selected):
+        next_gid = 0
+
+        if self._global_first:
+            global_tensor = self._global_to_tensor(cap)
+            if global_tensor is not None:
+                result[next_gid] = global_tensor
+                next_gid += 1
+
+        for members in selected:
             members = [t for t in members if t in tracks]
             if not members:
                 continue
             tensor = self._group_to_tensor(cap, tracks, members, frame_w, frame_h)
             if tensor is not None:
-                result[gid] = tensor
+                result[next_gid] = tensor
+                next_gid += 1
 
         cap.release()
         return result
-
-    @staticmethod
-    def _load_tracks(path: str) -> dict[int, np.ndarray]:
-        """
-        Load tracks from a JSON file.
-
-        :param path: Path to the JSON file.
-        :return: Mapping track_id -> (N, 5) array of [frame_id, x1, y1, x2, y2].
-        """
-        raw = json.loads(Path(path).read_text())
-        return {int(tid): np.asarray(pts, dtype=np.float32)
-                for tid, pts in raw.items()}
 
     def _select_groups(self, groups: list[list[int]]) -> list[list[int]]:
         """
@@ -170,11 +176,11 @@ class GroupCropper:
         if num_frames < 1:
             return None
 
-        if num_frames <= self._n_samples:
+        if num_frames <= self._n_frames:
             frame_ids = list(range(num_frames))
         else:
             frame_ids = np.linspace(
-                0, num_frames - 1, self._n_samples
+                0, num_frames - 1, self._n_frames
             ).round().astype(int).tolist()
             seen = set()
             frame_ids = [f for f in frame_ids
@@ -220,8 +226,51 @@ class GroupCropper:
         arr = np.stack(frames, axis=0).astype(np.float32) / 255.0
         tensor = torch.from_numpy(arr).permute(0, 3, 1, 2)
 
-        if tensor.shape[0] < self._n_samples:
-            pad = self._n_samples - tensor.shape[0]
+        if tensor.shape[0] < self._n_frames:
+            pad = self._n_frames - tensor.shape[0]
+            last = tensor[-1:].repeat(pad, 1, 1, 1)
+            tensor = torch.cat([tensor, last], dim=0)
+
+        return tensor
+
+
+    def _global_to_tensor(self, cap) -> torch.Tensor | None:
+        """
+        Build a tensor of the full frame (no group crop).
+
+        :param cap: Opened cv2.VideoCapture.
+        :return: Tensor (n_frames, 3, size, size) in RGB, values in [0, 1],
+                 or None if no frames could be read.
+        """
+        total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        if total < 1:
+            return None
+
+        if total <= self._n_frames:
+            frame_ids = list(range(total))
+        else:
+            frame_ids = np.linspace(0, total - 1, self._n_frames).round().astype(int).tolist()
+            seen = set()
+            frame_ids = [f for f in frame_ids if not (f in seen or seen.add(f))]
+
+        frames = []
+        for f in frame_ids:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, f)
+            ok, frame = cap.read()
+            if not ok:
+                continue
+            frame = VideoLoader.reflect_pad_and_resize(frame, (self._size, self._size), ratio_threshold=10)
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frames.append(frame)
+
+        if not frames:
+            return None
+
+        arr = np.stack(frames, axis=0).astype(np.float32) / 255.0
+        tensor = torch.from_numpy(arr).permute(0, 3, 1, 2)
+
+        if tensor.shape[0] < self._n_frames:
+            pad = self._n_frames - tensor.shape[0]
             last = tensor[-1:].repeat(pad, 1, 1, 1)
             tensor = torch.cat([tensor, last], dim=0)
 

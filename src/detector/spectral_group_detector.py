@@ -49,16 +49,22 @@ class SpectralGroupDetector:
         self._eigengap_min = eigengap_min
         self._max_k = max_k
 
-    def process_tracks(self, tracks_path: str) -> dict[int, list[int]]:
+    def process_tracks(self, tracks: dict = None, tracks_path: str = None) -> dict[int, list[int]]:
         """
-        Load tracks, build affinity, cluster, return groups.
+        Process tracks, build affinity, cluster, return groups.
 
-        :param tracks_path: path to the tracks JSON file
-        :return: mapping group_id -> list of track ids
+        :param tracks_path: Path to the tracks JSON file.
+        :param tracks: Mapping track_id -> (N, 5) array of [frame_id, x1, y1, x2, y2].
+        :return: Mapping group_id -> list of track ids.
+        :raises ValueError: If tracks/tracks_path not set.
         """
-        tracks = self.load_tracks(tracks_path)
-        tracks = {tid: pts for tid, pts in tracks.items()
-                  if len(pts) >= self._min_len}
+        if tracks is None and tracks_path is not None:
+            tracks = json.loads(Path(tracks_path).read_text())
+        elif tracks is None and tracks_path is None:
+            raise ValueError("Tracks or tracks path not set")
+        tracks = {int(tid): np.asarray(pts, dtype=np.float32) for tid, pts in tracks.items()}
+
+        tracks = {tid: pts for tid, pts in tracks.items() if len(pts) >= self._min_len}
 
         tids, matrix_a = self.build_affinity(tracks)
 
@@ -86,18 +92,6 @@ class SpectralGroupDetector:
                 groups.setdefault(int(label), []).append(int(tid))
 
         return groups
-
-    @staticmethod
-    def load_tracks(path: str) -> dict[int, np.ndarray]:
-        """
-        Load tracks from a JSON file.
-
-        :param path: path to the JSON file
-        :return: mapping track_id -> (N, 5) [frame_id, x1, y1, x2, y2]
-        """
-        raw = json.loads(Path(path).read_text())
-        return {int(tid): np.asarray(pts, dtype=np.float32)
-                for tid, pts in raw.items()}
 
     @staticmethod
     def centroids(track: np.ndarray) -> np.ndarray:

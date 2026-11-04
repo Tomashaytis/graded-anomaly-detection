@@ -30,8 +30,6 @@ EIGENGAP_MIN = 0.01        # for n >= 3: below this -> one group
 MAX_K = None               # None = up to n - 1
 
 
-# ---------- helpers ----------
-
 def load_tracks(path: str) -> dict[int, np.ndarray]:
     raw = json.loads(Path(path).read_text())
     return {int(tid): np.asarray(pts, dtype=np.float32)
@@ -141,8 +139,6 @@ def auto_k(A: np.ndarray) -> int:
         return 1
     return best_k
 
-
-# ---------- main ----------
 
 def main():
     tracks = load_tracks(TRACKS_PATH)

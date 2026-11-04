@@ -185,7 +185,7 @@ class VideoLoader:
     def reflect_pad_and_resize(frame: np.ndarray,
                                target_size: Tuple[int, int],
                                crop_black: bool = True,
-                               ratio_threshold = 1.5) -> np.ndarray:
+                               ratio_threshold = 1.7) -> np.ndarray:
         """
         Crop black borders, then bring the frame to the target aspect ratio:
         - if the frame is wider than the target — center-crop by width
@@ -201,7 +201,6 @@ class VideoLoader:
         :return: Processed tile.
         """
         target_h, target_w = target_size
-        print(crop_black)
 
         if crop_black:
             top, bottom, left, right = VideoLoader.detect_black_borders(frame)
@@ -256,7 +255,7 @@ class VideoLoader:
                   normalize: bool = True,
                   sampling_strategy: str = 'first',
                   crop_black: bool = True,
-                  ratio_threshold: float = 1.5) -> torch.Tensor:
+                  ratio_threshold: float = 1.7) -> torch.Tensor:
         """
         Load video as tensor with flexible frame sampling.
 
