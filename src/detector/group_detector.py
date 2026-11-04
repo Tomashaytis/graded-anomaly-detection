@@ -3,13 +3,21 @@ import numpy as np
 
 from pathlib import Path
 from typing import Optional
-from sklearn.cluster import SpectralClustering
+from sklearn.cluster import HDBSCAN, DBSCAN, SpectralClustering
 from scipy.spatial.distance import directed_hausdorff
 
 
-class SpectralGroupDetector:
+class GroupDetector:
     """
-    Group detection over pedestrian trajectories via spectral clustering.
+    Group detection over pedestrian trajectories.
+
+    Supports two clustering backends:
+      - 'spectral': spectral clustering on the affinity matrix
+      - 'dbscan': DBSCAN on the precomputed distance matrix (D = 1 - A)
+      - 'hdbscan': HDBSCAN on the precomputed distance matrix (D = 1 - A)
+
+    The affinity matrix is built from pairwise trajectory similarity
+    (spatial proximity, stability, and shape parallelism).
     """
 
     def __init__(
@@ -23,10 +31,12 @@ class SpectralGroupDetector:
             pair_sim_threshold: float = 0.6,
             eigengap_min: float = 0.01,
             max_k: Optional[int] = None,
+            method: str = "spectral",
+            dbscan_eps: float = 0.5,
+            dbscan_min_samples: int = 2,
+            hdbscan_min_cluster_size: int = 2
     ):
         """
-        Initialize the detector.
-
         :param min_len: minimum track length to participate in clustering
         :param show_affinity: print the affinity matrix before clustering
         :param sigma_spatial: Gaussian width for mean-distance kernel
@@ -34,8 +44,12 @@ class SpectralGroupDetector:
         :param sigma_parallel: Gaussian width for Hausdorff kernel
         :param min_common_frames: minimum overlapping frames to compare two tracks
         :param pair_sim_threshold: for n == 2, similarity >= this -> one group
-        :param eigengap_min: for n >= 3, gap below this -> one group
-        :param max_k: upper bound for auto-k (None = up to n - 1)
+        :param eigengap_min: for n >= 3, gap below this -> one group (spectral only)
+        :param max_k: upper bound for auto-k (None = up to n - 1, spectral only)
+        :param method: 'spectral', 'dbscan' or 'hdbscan'
+        :param dbscan_eps: DBSCAN eps on distance matrix (D = 1 - A)
+        :param dbscan_min_samples: DBSCAN min_samples
+        :param hdbscan_min_cluster_size: HDBSCAN min cluster size
         """
         self._min_len = min_len
         self._show_affinity = show_affinity
@@ -49,21 +63,25 @@ class SpectralGroupDetector:
         self._eigengap_min = eigengap_min
         self._max_k = max_k
 
+        self._method = method
+        self._dbscan_eps = dbscan_eps
+        self._dbscan_min_samples = dbscan_min_samples
+        self._hdbscan_min_cluster_size = hdbscan_min_cluster_size
+
     def process_tracks(self, tracks: dict = None, tracks_path: str = None) -> dict[int, list[int]]:
         """
         Process tracks, build affinity, cluster, return groups.
 
-        :param tracks_path: Path to the tracks JSON file.
-        :param tracks: Mapping track_id -> (N, 5) array of [frame_id, x1, y1, x2, y2].
-        :return: Mapping group_id -> list of track ids.
-        :raises ValueError: If tracks/tracks_path not set.
+        :param tracks: mapping track_id -> (N, 5) array of [frame_id, x1, y1, x2, y2]
+        :param tracks_path: path to the tracks JSON file
+        :return: mapping group_id -> list of track ids
+        :raises ValueError: if tracks/tracks_path not set
         """
         if tracks is None and tracks_path is not None:
             tracks = json.loads(Path(tracks_path).read_text())
         elif tracks is None and tracks_path is None:
             raise ValueError("Tracks or tracks path not set")
         tracks = {int(tid): np.asarray(pts, dtype=np.float32) for tid, pts in tracks.items()}
-
         tracks = {tid: pts for tid, pts in tracks.items() if len(pts) >= self._min_len}
 
         tids, matrix_a = self.build_affinity(tracks)
@@ -75,29 +93,60 @@ class SpectralGroupDetector:
                 row = " ".join(f"{matrix_a[i, j]:6.3f}" for j in range(len(tids)))
                 print(f"{tid:>5} {row}")
 
-        k = self.auto_k(matrix_a)
-
-        if k == 1:
-            groups = {0: [int(t) for t in tids]}
+        if self._method == "dbscan":
+            labels = self._cluster_dbscan(matrix_a)
+        elif self._method == "hdbscan":
+            labels = self._cluster_hdbscan(matrix_a)
         else:
-            sc = SpectralClustering(
-                n_clusters=k,
-                affinity="precomputed",
-                assign_labels="kmeans",
-                random_state=42,
-            )
-            labels = sc.fit_predict(matrix_a)
-            groups = {}
-            for tid, label in zip(tids, labels):
-                groups.setdefault(int(label), []).append(int(tid))
+            labels = self._cluster_spectral(matrix_a)
 
+        groups = {}
+        for tid, label in zip(tids, labels):
+            groups.setdefault(int(label), []).append(int(tid))
         return groups
+
+    def _cluster_spectral(self, matrix_a: np.ndarray) -> np.ndarray:
+        """Spectral clustering with eigengap-selected k."""
+        k = self.auto_k(matrix_a)
+        if k == 1:
+            return np.zeros(matrix_a.shape[0], dtype=int)
+        sc = SpectralClustering(
+            n_clusters=k,
+            affinity="precomputed",
+            assign_labels="kmeans",
+            random_state=42,
+        )
+        return sc.fit_predict(matrix_a)
+
+    def _cluster_dbscan(self, matrix_a: np.ndarray) -> np.ndarray:
+        """DBSCAN on the precomputed distance matrix D = 1 - A."""
+        d = 1.0 - matrix_a
+        np.fill_diagonal(d, 0.0)
+        d = np.clip(d, 0.0, 1.0)
+        return DBSCAN(
+            eps=self._dbscan_eps,
+            min_samples=self._dbscan_min_samples,
+            metric="precomputed",
+        ).fit_predict(d)
+
+    def _cluster_hdbscan(self, matrix_a: np.ndarray) -> np.ndarray:
+        """HDBSCAN on the precomputed distance matrix D = 1 - A."""
+        d = 1.0 - matrix_a
+        np.fill_diagonal(d, 0.0)
+        d = np.clip(d, 0.0, 1.0)
+        labels = HDBSCAN(
+            min_cluster_size=self._hdbscan_min_cluster_size,
+            metric="precomputed",
+            allow_single_cluster=False,
+            copy=False,
+        ).fit_predict(d)
+        if np.all(labels == -1):
+            return self._cluster_spectral(matrix_a)
+        return labels
 
     @staticmethod
     def centroids(track: np.ndarray) -> np.ndarray:
-        """
-        (N, 5) [f, x1, y1, x2, y2] -> (N, 3) [f, cx, cy]
-        """
+        """(N, 5) [f, x1, y1, x2, y2] -> (N, 3) [f, cx, cy]"""
         f = track[:, 0]
         cx = (track[:, 1] + track[:, 3]) / 2
         cy = (track[:, 2] + track[:, 4]) / 2
@@ -169,7 +218,7 @@ class SpectralGroupDetector:
 
     def auto_k(self, matrix_a: np.ndarray) -> int:
         """
-        Pick the number of clusters automatically.
+        Pick the number of clusters automatically (spectral only).
 
         n == 1: one group;
         n == 2: split by similarity threshold;
@@ -190,12 +239,10 @@ class SpectralGroupDetector:
         matrix_l = np.diag(degrees) - matrix_w
 
         eigvals = np.sort(np.linalg.eigvalsh(matrix_l))
-
         max_k = min(self._max_k or (n - 1), n - 1)
 
         best_k = 1
         best_gap = -1.0
-
         for k in range(2, max_k + 1):
             gap = eigvals[k] - eigvals[k - 1]
             if gap > best_gap:

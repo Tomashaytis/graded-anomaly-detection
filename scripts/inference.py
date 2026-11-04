@@ -1,9 +1,10 @@
 from src.tracker import TrackerFactory
-from src.detector import YoloTrailDetector, SpectralGroupDetector
+from src.detector import YoloTrailDetector, GroupDetector
 from src.utils import GroupCropper, visualize_video
 
-MODEL_PATH = "../models/detector/yolo/yolov8n.pt"
-VIDEO_PATH = f"../data/test_traj/video/001.mp4"
+MODEL_PATH = "../models/detector/yolo/yolov8m.pt"
+VIDEO_PATH = "../data/test_traj/video/018.mp4"
+GROUP_METHOD = 'hdbscan'
 N_FRAMES = 32
 SIZE = 224
 N_TOP = 2
@@ -23,8 +24,9 @@ def main():
 
     tracks = detector.process_video(VIDEO_PATH, step=1)
 
-    group_detector = SpectralGroupDetector()
+    group_detector = GroupDetector(method=GROUP_METHOD)
     cropper = GroupCropper(
+
         group_detector=group_detector,
         n_frames=N_FRAMES,
         size=SIZE,

@@ -1,7 +1,7 @@
 import os
 
 from src.tracker import TrackerFactory
-from src.detector import YoloTrailDetector, SpectralGroupDetector
+from src.detector import YoloTrailDetector, GroupDetector
 
 
 MODEL_PATH = "../models/detector/yolo/yolov8m.pt"
@@ -20,7 +20,7 @@ if __name__ == '__main__':
         classes=(0,),
         min_track_length=10,
     )
-    group_detector = SpectralGroupDetector()
+    group_detector = GroupDetector()
 
     video_names = os.listdir(INPUT_VIDEO_DIR)
     groups_lines = []

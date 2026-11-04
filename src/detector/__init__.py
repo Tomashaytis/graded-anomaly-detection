@@ -1,7 +1,7 @@
 from .yolo_trail_detector import YoloTrailDetector
-from .spectral_group_detector import SpectralGroupDetector
+from .group_detector import GroupDetector
 
 __all__ = [
     'YoloTrailDetector',
-    'SpectralGroupDetector',
+    'GroupDetector',
 ]

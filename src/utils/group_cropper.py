@@ -6,7 +6,7 @@ import numpy as np
 
 from pathlib import Path
 
-from src.detector import SpectralGroupDetector
+from src.detector import GroupDetector
 from src.dataset import VideoLoader
 
 
@@ -17,13 +17,14 @@ class GroupCropper:
 
     def __init__(
         self,
-        group_detector: SpectralGroupDetector,
+        group_detector: GroupDetector,
         n_frames: int = 32,
         size: int = 224,
         padding: float = 0.1,
         n_top: int = 2,
         n_random: int = 1,
         global_first: bool = False,
+        global_similarity_threshold: float = 0.8,
         seed: int = 42,
     ):
         """
@@ -34,6 +35,8 @@ class GroupCropper:
         :param n_top: Take this many largest groups by member count.
         :param n_random: Take this many random groups from the rest.
         :param global_first: If True, add global crop at first position.
+        :param global_similarity_threshold: If global_first=True, drop group crops whose bbox covers
+            at least this fraction of the frame area
         :param seed: RNG seed for the random pick.
         """
         self._group_detector = group_detector
@@ -43,6 +46,7 @@ class GroupCropper:
         self._n_top = n_top
         self._n_random = n_random
         self._global_first = global_first
+        self._global_similarity_threshold = global_similarity_threshold
         self._seed = seed
 
     def get_group_tensors(self, video_path: str, tracks: dict = None, tracks_path: str = None) -> dict[int, torch.Tensor]:
@@ -204,6 +208,12 @@ class GroupCropper:
         x1, y1, x2, y2 = union
         if x2 <= x1 or y2 <= y1:
             return None
+
+        if self._global_first:
+            frame_area = float(frame_w * frame_h)
+            group_area = float((x2 - x1) * (y2 - y1))
+            if group_area / frame_area >= self._global_similarity_threshold:
+                return None
 
         frames = []
         for f in frame_ids:
