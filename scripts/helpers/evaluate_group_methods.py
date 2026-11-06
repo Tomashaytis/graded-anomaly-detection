@@ -15,9 +15,9 @@ def xy_to_bbox_track(xy: np.ndarray, box_size: float = BOX_SIZE) -> np.ndarray:
     """
     Convert (N, 2) [x, y] centroids to (N, 5) [frame_id, x1, y1, x2, y2].
 
-    :param xy: (N, 2) array of (x, y)
-    :param box_size: side length of the synthetic bbox, pixels
-    :return: (N, 5) array of [frame_id, x1, y1, x2, y2]
+    :param xy: (N, 2) array of (x, y).
+    :param box_size: Side length of the synthetic bbox, pixels.
+    :return: (N, 5) array of [frame_id, x1, y1, x2, y2].
     """
     n = len(xy)
     frame_ids = np.arange(n, dtype=np.float32)
@@ -30,6 +30,11 @@ def xy_to_bbox_track(xy: np.ndarray, box_size: float = BOX_SIZE) -> np.ndarray:
 
 
 def load_dataset(path: str) -> dict[int, dict]:
+    """
+    Loads dataset from JSON.
+    :param path: Path to json file.
+    :return: Loaded dataset.
+    """
     with open(path, "r", encoding="utf-8") as f:
         raw = json.load(f)
 

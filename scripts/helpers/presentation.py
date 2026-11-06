@@ -8,9 +8,10 @@ from math import pi
 from pathlib import Path
 
 MODEL_EVAL_DIRS = {
-    'I3D': Path('../runs') / 'model=I3D-8x8-R50' / 'results' / 'sh' / 'eval_i3d_r50_best-epoch=08-val_acc=0.787',
-    'SlowFast': Path('../runs') / 'model=SlowFast-8x8-R50' / 'results' / 'sh' / 'eval_slowfast_r50_best-epoch=10-val_acc=0.774',
-    'X3D-M': Path('../runs') / 'model=X3D-M' / 'results' / 'sh' / 'eval_x3d_m_best-epoch=18-val_acc=0.775',
+    'I3D': Path('../../runs') / 'model=I3D-8x8-R50' / 'results' / 'sh' / 'eval_i3d_r50_best-epoch=08-val_acc=0.787',
+    'SlowFast': Path(
+        '../../runs') / 'model=SlowFast-8x8-R50' / 'results' / 'sh' / 'eval_slowfast_r50_best-epoch=10-val_acc=0.774',
+    'X3D-M': Path('../../runs') / 'model=X3D-M' / 'results' / 'sh' / 'eval_x3d_m_best-epoch=18-val_acc=0.775',
 }
 METRICS_DATA = {
     'I3D-8x8-R50': {
@@ -54,7 +55,7 @@ TRANSLATION = {
         'normal': 'Нормальное поведение'
     }
 
-SAVE_DIR = Path('../docs') / 'Статья' / 'Рисунки'
+SAVE_DIR = Path('../../docs') / 'Статья' / 'Рисунки'
 
 
 if __name__ == '__main__':

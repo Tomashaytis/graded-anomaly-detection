@@ -39,19 +39,19 @@ class GroupDetector:
             hdbscan_min_cluster_size: int = 2
     ):
         """
-        :param min_len: minimum track length to participate in clustering
-        :param show_affinity: print the affinity matrix before clustering
-        :param sigma_spatial: Gaussian width for mean-distance kernel
-        :param sigma_stability: Gaussian width for distance-variance kernel
-        :param sigma_parallel: Gaussian width for Hausdorff kernel
-        :param min_common_frames: minimum overlapping frames to compare two tracks
-        :param pair_sim_threshold: for n == 2, similarity >= this -> one group
-        :param eigengap_min: for n >= 3, gap below this -> one group (spectral only)
-        :param max_k: upper bound for auto-k (None = up to n - 1, spectral only)
-        :param method: 'spectral', 'dbscan' or 'hdbscan'
-        :param dbscan_eps: DBSCAN eps on distance matrix (D = 1 - A)
-        :param dbscan_min_samples: DBSCAN min_samples
-        :param hdbscan_min_cluster_size: HDBSCAN min cluster size
+        :param min_len: Minimum track length to participate in clustering.
+        :param show_affinity: Print the affinity matrix before clustering.
+        :param sigma_spatial: Gaussian width for mean-distance kernel.
+        :param sigma_stability: Gaussian width for distance-variance kernel.
+        :param sigma_parallel: Gaussian width for Hausdorff kernel.
+        :param min_common_frames: Minimum overlapping frames to compare two tracks.
+        :param pair_sim_threshold: For n == 2, similarity >= this -> one group.
+        :param eigengap_min: For n >= 3, gap below this -> one group (spectral only).
+        :param max_k: Upper bound for auto-k (None = up to n - 1, spectral only).
+        :param method: Cluster medhod ('spectral', 'dbscan' or 'hdbscan').
+        :param dbscan_eps: DBSCAN eps on distance matrix (D = 1 - A).
+        :param dbscan_min_samples: DBSCAN min_samples.
+        :param hdbscan_min_cluster_size: HDBSCAN min cluster size.
         """
         self._min_len = min_len
         self._show_affinity = show_affinity
@@ -77,10 +77,10 @@ class GroupDetector:
         """
         Process tracks, build affinity, cluster, return groups.
 
-        :param tracks: mapping track_id -> (N, 5) array of [frame_id, x1, y1, x2, y2]
-        :param tracks_path: path to the tracks JSON file
-        :return: mapping group_id -> list of track ids
-        :raises ValueError: if tracks/tracks_path not set
+        :param tracks: Mapping track_id -> (N, 5) array of [frame_id, x1, y1, x2, y2].
+        :param tracks_path: Path to the tracks JSON file.
+        :return: Mapping group_id -> list of track ids.
+        :raises ValueError: If tracks/tracks_path not set.
         """
         if tracks is None and tracks_path is not None:
             tracks = json.loads(Path(tracks_path).read_text())
@@ -111,7 +111,12 @@ class GroupDetector:
         return groups
 
     def _cluster_spectral(self, matrix_a: np.ndarray) -> np.ndarray:
-        """Spectral clustering with eigengap-selected k."""
+        """
+        Spectral clustering with eigengap-selected k.
+
+        :param matrix_a: Matrix with features.
+        :return: Labels.
+        """
         k = self.auto_k(matrix_a)
         if k == 1:
             return np.zeros(matrix_a.shape[0], dtype=int)
@@ -136,7 +141,12 @@ class GroupDetector:
         return labels
 
     def _cluster_dbscan(self, matrix_a: np.ndarray) -> np.ndarray:
-        """DBSCAN on the precomputed distance matrix D = 1 - A."""
+        """
+        DBSCAN on the precomputed distance matrix D = 1 - A.
+
+        :param matrix_a: Matrix with features.
+        :return: Labels.
+        """
         d = 1.0 - matrix_a
         np.fill_diagonal(d, 0.0)
         d = np.clip(d, 0.0, 1.0)
@@ -147,7 +157,12 @@ class GroupDetector:
         ).fit_predict(d)
 
     def _cluster_hdbscan(self, matrix_a: np.ndarray) -> np.ndarray:
-        """HDBSCAN on the precomputed distance matrix D = 1 - A."""
+        """
+        HDBSCAN on the precomputed distance matrix D = 1 - A.
+
+        :param matrix_a: Matrix with features.
+        :return: Labels.
+        """
         d = 1.0 - matrix_a
         np.fill_diagonal(d, 0.0)
         d = np.clip(d, 0.0, 1.0)
@@ -163,7 +178,12 @@ class GroupDetector:
 
     @staticmethod
     def centroids(track: np.ndarray) -> np.ndarray:
-        """(N, 5) [f, x1, y1, x2, y2] -> (N, 3) [f, cx, cy]"""
+        """
+        Return centroids for track bboxes.
+
+        :param tracks: Tracks.
+        :return: Track centroids.
+        """
         f = track[:, 0]
         cx = (track[:, 1] + track[:, 3]) / 2
         cy = (track[:, 2] + track[:, 4]) / 2
@@ -178,10 +198,10 @@ class GroupDetector:
         stability (distance variance), parallel (Hausdorff shape).
         Only frames present in both tracks are compared.
 
-        :param traj_a: first centroid track
-        :param traj_b: second centroid track
-        :param bbox_scale: normalisation scale (mean bbox diagonal)
-        :return: similarity in [0, 1]; 0.0 if too few common frames
+        :param traj_a: First centroid track.
+        :param traj_b: Second centroid track.
+        :param bbox_scale: Normalisation scale (mean bbox diagonal).
+        :return: Similarity in [0, 1]; 0.0 if too few common frames.
         """
         frames_a = {int(f): (x, y) for f, x, y in traj_a}
         frames_b = {int(f): (x, y) for f, x, y in traj_b}
@@ -208,8 +228,8 @@ class GroupDetector:
         """
         Build the pairwise similarity matrix over all tracks.
 
-        :param tracks: mapping track_id -> (N, 5) [f, x1, y1, x2, y2]
-        :return: (list of track ids, (n, n) similarity matrix)
+        :param tracks: Mapping track_id -> (N, 5) [f, x1, y1, x2, y2].
+        :return: Tuple: (list of track ids, (n, n) similarity matrix).
         """
         centroids_map = {tid: self.centroids(pts) for tid, pts in tracks.items()}
 
@@ -241,8 +261,8 @@ class GroupDetector:
         n == 2: split by similarity threshold;
         n >= 3: eigengap on the Laplacian.
 
-        :param matrix_a: (n, n) similarity matrix with 1s on the diagonal
-        :return: number of clusters (>= 1)
+        :param matrix_a: (n, n) similarity matrix with 1s on the diagonal.
+        :return: Number of clusters (>= 1).
         """
         n = matrix_a.shape[0]
         if n <= 1:

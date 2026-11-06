@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
-DEFAULT_CONFIG_PATH = os.path.join('..', 'configs', 'default.yaml')
+DEFAULT_CONFIG_PATH = os.path.join('../..', 'configs', 'default.yaml')
 EVAL_FOLDER = 'eval_i3d_r50_best-epoch=08-val_acc=0.787'
 MODEL_NAME = 'I3D-8x8-R50'
 
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     with open(DEFAULT_CONFIG_PATH, 'r') as f:
         config = yaml.safe_load(f)
 
-    eval_dir = Path('..') / Path(config['paths']['output_dir']) / 'results' / 'sh' / EVAL_FOLDER
+    eval_dir = Path('../..') / Path(config['paths']['output_dir']) / 'results' / 'sh' / EVAL_FOLDER
 
     metrics_df = pd.read_csv(eval_dir / 'per_class_metrics.csv')
 

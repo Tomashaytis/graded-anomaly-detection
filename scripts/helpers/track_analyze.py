@@ -4,7 +4,7 @@ from src.tracker import TrackerFactory
 from src.detector import YoloTrailDetector, GroupDetector
 
 
-MODEL_PATH = "../models/detector/yolo/yolov8m.pt"
+MODEL_PATH = "../../models/detector/yolo/yolov8m.pt"
 INPUT_VIDEO_DIR = "../data/test_traj/video"
 OUTPUT_VIDEO_DIR = "../data/test_traj/video_traj"
 OUTPUT_TRAJECTORIES_DIR = "../data/test_traj/traj"

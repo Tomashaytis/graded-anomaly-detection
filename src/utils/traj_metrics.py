@@ -5,6 +5,9 @@ from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
 
 @dataclass
 class PairwiseMetrics:
+    """
+    Pairwise metrics dataclass
+    """
     tp: int = 0
     fp: int = 0
     fn: int = 0
@@ -12,35 +15,56 @@ class PairwiseMetrics:
 
     @property
     def precision(self) -> float:
+        """
+        :return: Precision.
+        """
         d = self.tp + self.fp
         return self.tp / d if d > 0 else 0.0
 
     @property
     def recall(self) -> float:
+        """
+        :return: Recall.
+        """
         d = self.tp + self.fn
         return self.tp / d if d > 0 else 0.0
 
     @property
     def specificity(self) -> float:
+        """
+        :return: Specificity (TNR).
+        """
         d = self.tn + self.fp
         return self.tn / d if d > 0 else 0.0
 
     @property
     def f1(self) -> float:
+        """
+        :return: F1-Score.
+        """
         p, r = self.precision, self.recall
         return 2 * p * r / (p + r) if (p + r) > 0 else 0.0
 
     @property
     def accuracy(self) -> float:
+        """
+        :return: Accuracy.
+        """
         d = self.tp + self.tn + self.fp + self.fn
         return (self.tp + self.tn) / d if d > 0 else 0.0
 
     @property
     def balanced_accuracy(self) -> float:
+        """
+        :return: Balanced Accuracy.
+        """
         return (self.recall + self.specificity) / 2.0
 
     @property
     def mcc(self) -> float:
+        """
+        :return: MCC.
+        """
         tp, tn, fp, fn = self.tp, self.tn, self.fp, self.fn
         num = tp * tn - fp * fn
         den = ((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)) ** 0.5
@@ -48,11 +72,17 @@ class PairwiseMetrics:
 
     @property
     def jaccard(self) -> float:
+        """
+        :return: Jaccard (IOU).
+        """
         d = self.tp + self.fp + self.fn
         return self.tp / d if d > 0 else 0.0
 
     @property
     def fowlkes_mallows(self) -> float:
+        """
+        :return: Fowlkes-Mallows.
+        """
         p, r = self.precision, self.recall
         return (p * r) ** 0.5
 
@@ -71,13 +101,25 @@ class PairwiseMetrics:
 
 
 def labels_from_groups(groups: dict) -> tuple[list[int], list[int]]:
-    """Convert {gid: [tids]} to (tids_list, labels_list)."""
+    """
+    Convert {gid: [tids]} to (tids_list, labels_list).
+
+    :param groups: Groups.
+    :return: (tids_list, labels_list).
+    """
     tids = sorted(set(chain.from_iterable(groups.values())))
     gid_of = {tid: gid for gid, members in groups.items() for tid in members}
     return tids, [gid_of[tid] for tid in tids]
 
 
 def calculate_ari_nmi(groups_gt: dict, groups_pred: dict) -> tuple[float, float]:
+    """
+    Calculate ARI and NMI.
+
+    :param groups_gt: Ground-truth groups.
+    :param groups_pred: Predicted groups.
+    :return: ARI and NMI.
+    """
     tids_gt, labels_gt = labels_from_groups(groups_gt)
     tids_pred, labels_pred = labels_from_groups(groups_pred)
 
@@ -97,9 +139,9 @@ def calculate_pairwise_metrics(groups_gt: dict, groups_pred: dict) -> PairwiseMe
     """
     Pairwise TP/FP/FN/TN between two groupings.
 
-    :param groups_gt: ground-truth groups (gid -> [tids])
-    :param groups_pred: predicted groups (gid -> [tids])
-    :return: PairwiseMetrics with tp, fp, fn, tn
+    :param groups_gt: Ground-truth groups (gid -> [tids]).
+    :param groups_pred: Predicted groups (gid -> [tids]).
+    :return: PairwiseMetrics with tp, fp, fn, tn.
     """
     tids = sorted(
         set(chain.from_iterable(groups_gt.values())) |

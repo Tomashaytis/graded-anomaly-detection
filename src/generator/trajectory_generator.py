@@ -11,7 +11,7 @@ class TrajectoryGenerator:
 
     def __init__(self, rng: np.random.Generator = None):
         """
-        :param rng: numpy Generator; if None, a fresh one is created
+        :param rng: Numpy Generator; if None, a fresh one is created.
         """
         self._rng = rng if rng is not None else np.random.default_rng()
 
@@ -26,12 +26,12 @@ class TrajectoryGenerator:
         """
         Generate a smooth leader trajectory with time-varying speed.
 
-        :param n_frames: number of frames
-        :param start: (x, y) starting position
-        :param speed: base speed (pixels per frame)
-        :param stop_prob: per-frame probability of "freezing" the speed near zero
-        :param smooth: smoothing window for the speed signal
-        :return: (n_frames, 2) array of (x, y)
+        :param n_frames: Number of frames.
+        :param start: (x, y) starting position.
+        :param speed: Base speed (pixels per frame).
+        :param stop_prob: Per-frame probability of "freezing" the speed near zero.
+        :param smooth: Smoothing window for the speed signal.
+        :return: (n_frames, 2) array of (x, y).
         """
         initial_heading = self._rng.uniform(0, 2 * np.pi)
 
@@ -72,12 +72,12 @@ class TrajectoryGenerator:
         The follower is pulled toward (leader + offset) with strength k_attract,
         and its speed is capped by max_speed.
 
-        :param leader_xy: (N, 2) leader positions
-        :param offset: (dx, dy) target offset from the leader
-        :param jitter: per-frame random noise (added to acceleration)
-        :param k_attract: attraction strength toward the target position
-        :param max_speed: maximum follower speed (pixels per frame)
-        :return: (N, 2) array of (x, y)
+        :param leader_xy: (N, 2) leader positions.
+        :param offset: (dx, dy) target offset from the leader.
+        :param jitter: Per-frame random noise (added to acceleration).
+        :param k_attract: Attraction strength toward the target position.
+        :param max_speed: Maximum follower speed (pixels per frame).
+        :return: (N, 2) array of (x, y).
         """
         n = len(leader_xy)
         offset_arr = np.asarray(offset, dtype=float)
@@ -119,12 +119,12 @@ class TrajectoryGenerator:
         Unlike group leaders, singletons rarely change direction and
         have small speed variation.
 
-        :param n_frames: number of frames
-        :param start: (x, y) starting position
-        :param speed: base speed (pixels per frame); near zero for standing
-        :param heading_noise: per-frame heading noise (small = straighter)
-        :param speed_noise: per-frame speed noise (small = steadier)
-        :return: (n_frames, 2) array of (x, y)
+        :param n_frames: Number of frames.
+        :param start: (x, y) starting position.
+        :param speed: Base speed (pixels per frame); near zero for standing.
+        :param heading_noise: Per-frame heading noise (small = straighter).
+        :param speed_noise: Per-frame speed noise (small = steadier).
+        :return: (n_frames, 2) array of (x, y).
         """
         initial_heading = self._rng.uniform(0, 2 * np.pi)
 
@@ -154,13 +154,13 @@ class TrajectoryGenerator:
 
         Group sizes define clusters: size 1 = singleton, size >= 2 = group.
 
-        :param group_sizes: sizes of clusters (1 = singleton)
-        :param n_frames: number of frames per track
-        :param frame_size: (width, height) for start positions
-        :param jitter: base jitter for group followers
-        :param p_stationary: probability that a cluster is stationary
-        :param p_slow: probability that a cluster is slow
-        :return: (tracks, groups); singletons are in groups as [tid]
+        :param group_sizes: Sizes of clusters (1 = singleton).
+        :param n_frames: Number of frames per track.
+        :param frame_size: Frame size.
+        :param jitter: Base jitter for group followers.
+        :param p_stationary: Probability that a cluster is stationary.
+        :param p_slow: Probability that a cluster is slow.
+        :return: (tracks, groups); singletons are in groups as [tid].
         """
         tracks: dict[int, np.ndarray] = {}
         groups: dict[int, list[int]] = {}
@@ -215,10 +215,10 @@ class TrajectoryGenerator:
 
         Group members share a color; singletons are drawn in gray.
 
-        :param tracks: dict[tid -> (N, 2) array of (x, y)]
-        :param groups: dict[group_id -> [tids]]
-        :param frame_size: (width, height) for axes limits
-        :param figsize: figure size in inches
+        :param tracks: Tracks.
+        :param groups: Groups.
+        :param frame_size: Frame size.
+        :param figsize: Figure size in inches.
         """
         fig, ax = plt.subplots(figsize=figsize)
 
@@ -258,12 +258,12 @@ class TrajectoryGenerator:
         """
         Animate the synthetic scene: dots move along the trajectories.
 
-        :param tracks: dict[tid -> (N, 2) array of (x, y)]
-        :param groups: dict[group_id -> [tids]]
-        :param frame_size: (width, height) for axes limits
-        :param figsize: figure size in inches
-        :param interval: delay between frames in ms
-        :return: matplotlib FuncAnimation
+        :param tracks: Tracks.
+        :param groups: Groups.
+        :param frame_size: Frame size.
+        :param figsize: Figure size in inches.
+        :param interval: Delay between frames in ms.
+        :return: Matplotlib FuncAnimation.
         """
         group_of = {}
         for gid, members in groups.items():

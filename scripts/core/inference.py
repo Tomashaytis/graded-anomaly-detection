@@ -2,7 +2,7 @@ from src.tracker import TrackerFactory
 from src.detector import YoloTrailDetector, GroupDetector
 from src.utils import GroupCropper, visualize_video
 
-MODEL_PATH = "../models/detector/yolo/yolov8m.pt"
+MODEL_PATH = "../../models/detector/yolo/yolov8m.pt"
 VIDEO_PATH = "../data/test_traj/video/018.mp4"
 GROUP_METHOD = 'hdbscan'
 N_FRAMES = 32
