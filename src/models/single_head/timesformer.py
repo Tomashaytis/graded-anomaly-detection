@@ -5,7 +5,7 @@ TimeSformer single-head for video classification.
 import torch
 import torch.nn as nn
 
-from transformers import TimesformerModel
+from transformers import TimesformerModel, TimesformerConfig
 
 from src.models.base_model import BaseVideoModel
 
@@ -17,7 +17,12 @@ class TimeSformer(BaseVideoModel):
 
     def _create_backbone(self) -> nn.Module:
         """Load TimeSformer encoder (without classification head)."""
-        model = TimesformerModel.from_pretrained(self._weights_path)
+        if self._weights_path is None:
+            config = TimesformerConfig()
+            model = TimesformerModel(config)
+        else:
+            model = TimesformerModel.from_pretrained(self._weights_path)
+
         for param in model.parameters():
             param.requires_grad = False
         return model
@@ -73,7 +78,26 @@ class TimeSformer(BaseVideoModel):
         if x.shape[1] == 3:
             x = x.permute(0, 2, 1, 3, 4)
 
+        mean = torch.tensor([0.485, 0.456, 0.406], device=x.device).view(1, 1, 3, 1, 1)
+        std = torch.tensor([0.229, 0.224, 0.225], device=x.device).view(1, 1, 3, 1, 1)
+        x = (x - mean) / std
+
+        # NaN check for inputs
+        if torch.isnan(x).any() or torch.isinf(x).any():
+            print(f"[INPUT] nan={torch.isnan(x).sum()}, inf={torch.isinf(x).sum()}, "
+                  f"min={x.min():.4f}, max={x.max():.4f}")
+
         outputs = self._backbone(pixel_values=x)
         features = outputs.last_hidden_state[:, 0]
 
-        return self.head(features)
+        # NaN check for features
+        if torch.isnan(features).any() or torch.isinf(features).any():
+            print(f"[FEATURES] nan={torch.isnan(features).sum()}, inf={torch.isinf(features).sum()}")
+
+        logits = self.head(features)
+
+        # NaN check for logits
+        if torch.isnan(logits).any() or torch.isinf(logits).any():
+            print(f"[LOGITS1] nan={torch.isnan(logits).sum()}, min={logits.min():.4f}, max={logits.max():.4f}")
+
+        return logits

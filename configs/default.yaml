@@ -1,6 +1,6 @@
 # Training configuration
 training:
-  num_epochs: 15
+  num_epochs: 5
   batch_size: 8
   num_workers: 2
   learning_rate: 0.00005
@@ -23,10 +23,12 @@ model:
     - x3d_m
     - x3d_l
     - timesformer
+    - videomae
     - i3d_r50_mh
     - slowfast_r50_mh
     - x3d_m_mh
     - timesformer_mh
+    - videomae_mh
 
 # Model presets
 model_presets:
@@ -90,8 +92,17 @@ model_presets:
     weights_path: "models/transformer/timesformer"
     freeze_backbone: true
     dropout: 0.5
-    batch_size: 2
-    accumulate_grad_batches: 16
+    batch_size: 4
+    accumulate_grad_batches: 8
+
+  videomae:
+    name: "videomae"
+    multi_head_mode: false
+    weights_path: "models/transformer/VideoMAE"
+    freeze_backbone: true
+    dropout: 0.5
+    batch_size: 4
+    accumulate_grad_batches: 8
 
   i3d_r50_mh:
     name: "i3d_r50_mh"
@@ -123,11 +134,20 @@ model_presets:
   timesformer_mh:
     name: "timesformer_mh"
     multi_head_mode: true
-    weights_path: "models/transformer/timesformer"
+    weights_path: "models/transformer/TimeSformer"
     freeze_backbone: true
     dropout: 0.5
-    batch_size: 2
-    accumulate_grad_batches: 16
+    batch_size: 4
+    accumulate_grad_batches: 8
+
+  videomae_mh:
+    name: "videomae_mh"
+    multi_head_mode: true
+    weights_path: "models/transformer/VideoMAE"
+    freeze_backbone: true
+    dropout: 0.5
+    batch_size: 4
+    accumulate_grad_batches: 8
 
 # Data configuration
 data:
@@ -146,7 +166,7 @@ paths:
   val_lmdb: "D:/Projects/actions-data/val_lmdb"
   test_lmdb: "D:/Projects/actions-data/test_lmdb"
   output_dir: "runs/model=I3D-8x8-R50"
-  checkpoint: "runs/model=I3D-8x8-R50/run-4 (mh)/checkpoints/best-epoch=09-val_acc2_mh=0.824.ckpt"
+  checkpoint: "runs/model=TIMESFORMER/train/run-2 (mh)/checkpoints/best-epoch=05-val_acc2_mh=0.857.ckpt"
 
 # Logging
 logging:

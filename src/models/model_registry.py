@@ -3,8 +3,9 @@ Model registry and factory for video classification models.
 """
 
 from .base_model import BaseVideoModel
-from src.models.single_head import I3DR50, SlowFastR50, X3D, TimeSformer
-from src.models.multi_head import I3DR50MultiHead, SlowFastR50MultiHead, X3DMultiHead, TimeSformerMultiHead
+from src.models.single_head import I3DR50, SlowFastR50, X3D, TimeSformer, VideoMAE
+from src.models.multi_head import (I3DR50MultiHead, SlowFastR50MultiHead, X3DMultiHead,
+                                   TimeSformerMultiHead, VideoMAEMultiHead)
 
 
 MODEL_REGISTRY = {
@@ -15,6 +16,7 @@ MODEL_REGISTRY = {
     'x3d_m': (X3D, 'x3d_m'),
     'x3d_l': (X3D, 'x3d_l'),
     'timesformer': (TimeSformer, None),
+    'videomae': (VideoMAE, None),
 
     'i3d_r50_mh': (I3DR50MultiHead, None),
     'slowfast_r50_mh': (SlowFastR50MultiHead, None),
@@ -23,6 +25,7 @@ MODEL_REGISTRY = {
     'x3d_m_mh': (X3DMultiHead, 'x3d_m'),
     'x3d_l_mh': (X3DMultiHead, 'x3d_l'),
     'timesformer_mh': (TimeSformerMultiHead, None),
+    'videomae_mh': (VideoMAEMultiHead, None),
 }
 
 
