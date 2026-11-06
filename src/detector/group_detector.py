@@ -1,9 +1,11 @@
 import json
+import warnings
 import numpy as np
 
 from pathlib import Path
 from typing import Optional
 from sklearn.cluster import HDBSCAN, DBSCAN, SpectralClustering
+from sklearn.exceptions import ConvergenceWarning
 from scipy.spatial.distance import directed_hausdorff
 
 
@@ -68,6 +70,9 @@ class GroupDetector:
         self._dbscan_min_samples = dbscan_min_samples
         self._hdbscan_min_cluster_size = hdbscan_min_cluster_size
 
+        self._warn_count = 0
+        self._warn_details = []
+
     def process_tracks(self, tracks: dict = None, tracks_path: str = None) -> dict[int, list[int]]:
         """
         Process tracks, build affinity, cluster, return groups.
@@ -110,13 +115,25 @@ class GroupDetector:
         k = self.auto_k(matrix_a)
         if k == 1:
             return np.zeros(matrix_a.shape[0], dtype=int)
-        sc = SpectralClustering(
-            n_clusters=k,
-            affinity="precomputed",
-            assign_labels="kmeans",
-            random_state=42,
-        )
-        return sc.fit_predict(matrix_a)
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", ConvergenceWarning)
+            sc = SpectralClustering(
+                n_clusters=k,
+                affinity="precomputed",
+                assign_labels="kmeans",
+                random_state=42,
+            )
+            labels = sc.fit_predict(matrix_a)
+
+        if caught:
+            self._warn_count += 1
+            if len(self._warn_details) < 10:
+                self._warn_details.append(
+                    (matrix_a.shape[0], k, len(set(labels)))
+                )
+
+        return labels
 
     def _cluster_dbscan(self, matrix_a: np.ndarray) -> np.ndarray:
         """DBSCAN on the precomputed distance matrix D = 1 - A."""
