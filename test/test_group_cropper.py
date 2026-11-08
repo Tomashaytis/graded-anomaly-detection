@@ -10,6 +10,7 @@ def test():
         size=224,
         n_top=2,
         n_random=1,
+        global_first=True,
     )
 
     tensors = cropper.get_group_tensors(

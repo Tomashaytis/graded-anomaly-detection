@@ -185,7 +185,8 @@ class VideoLoader:
     def reflect_pad_and_resize(frame: np.ndarray,
                                target_size: Tuple[int, int],
                                crop_black: bool = True,
-                               ratio_threshold = 1.7) -> np.ndarray:
+                               ratio_threshold: float = 1.7,
+                               vertical_blur: bool = False) -> np.ndarray:
         """
         Crop black borders, then bring the frame to the target aspect ratio:
         - if the frame is wider than the target — center-crop by width
@@ -198,6 +199,7 @@ class VideoLoader:
         :param target_size: Target frame size.
         :param crop_black: If True, crops black pixels on sides.
         :param ratio_threshold: Ratio threshold.
+        :param vertical_blur: If True, adds vertical blur.
         :return: Processed tile.
         """
         target_h, target_w = target_size
@@ -216,9 +218,21 @@ class VideoLoader:
         current_ratio = w / h
 
         if target_ratio < current_ratio <= target_ratio * ratio_threshold:
-            new_w = min(int(round(h * target_ratio)), w)
-            x0 = (w - new_w) // 2
-            frame = frame[:, x0:x0 + new_w]
+            if vertical_blur:
+                new_h = int(round(w / target_ratio))
+                pad = new_h - h
+                top = pad // 2
+                bottom = pad - top
+                if top > 0 or bottom > 0:
+                    ksize = max(3, (min(top, bottom) // 4) | 1)
+                    blurred = cv2.GaussianBlur(frame, (ksize, ksize), 0)
+                    top_band = blurred[:top] if top > 0 else np.empty((0, w, 3), dtype=frame.dtype)
+                    bottom_band = blurred[-bottom:] if bottom > 0 else np.empty((0, w, 3), dtype=frame.dtype)
+                    frame = np.concatenate([top_band, frame, bottom_band], axis=0)
+            else:
+                new_w = min(int(round(h * target_ratio)), w)
+                x0 = (w - new_w) // 2
+                frame = frame[:, x0:x0 + new_w]
         elif current_ratio > target_ratio * ratio_threshold:
             n_tiles = int(np.ceil(current_ratio / (target_ratio * ratio_threshold)))
             frame = np.tile(frame, (n_tiles, 1, 1))
@@ -255,7 +269,8 @@ class VideoLoader:
                   normalize: bool = True,
                   sampling_strategy: str = 'first',
                   crop_black: bool = True,
-                  ratio_threshold: float = 1.7) -> torch.Tensor:
+                  ratio_threshold: float = 1.7,
+                  vertical_blur: bool = False) -> torch.Tensor:
         """
         Load video as tensor with flexible frame sampling.
 
@@ -265,6 +280,7 @@ class VideoLoader:
         :param sampling_strategy: 'first', 'uniform', 'random_segment'.
         :param crop_black: If True, crops black pixels on sides.
         :param ratio_threshold: Ratio threshold.
+        :param vertical_blur: If True, adds vertical blur.
         :return: tensor of shape [C, T, H, W]
         """
         total_frames = self._total_frames
@@ -287,7 +303,7 @@ class VideoLoader:
         processed = []
         for frame in frames:
             if resize_size is not None:
-                frame = VideoLoader.reflect_pad_and_resize(frame, resize_size, crop_black, ratio_threshold)
+                frame = VideoLoader.reflect_pad_and_resize(frame, resize_size, crop_black, ratio_threshold, vertical_blur)
             t = torch.from_numpy(frame).permute(2, 0, 1).float()
             if normalize:
                 t = t / 255.0

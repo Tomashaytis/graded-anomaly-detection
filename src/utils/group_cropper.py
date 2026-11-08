@@ -310,7 +310,7 @@ class GroupCropper:
             ok, frame = cap.read()
             if not ok:
                 continue
-            frame = VideoLoader.reflect_pad_and_resize(frame, (self._size, self._size), ratio_threshold=10)
+            frame = VideoLoader.reflect_pad_and_resize(frame, (self._size, self._size), ratio_threshold=10, vertical_blur=True)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frames.append(frame)
 
