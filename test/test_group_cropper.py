@@ -1,9 +1,9 @@
-from src.detector import SpectralGroupDetector
+from src.detector import GroupDetector
 from src.utils import GroupCropper, visualize_video
 
 
 def test():
-    group_detector = SpectralGroupDetector()
+    group_detector = GroupDetector(method="spectral")
     cropper = GroupCropper(
         group_detector=group_detector,
         n_frames=32,

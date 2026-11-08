@@ -165,6 +165,43 @@ class GroupCropper:
 
         return int(x1), int(y1), int(x2), int(y2)
 
+    def _square_bbox(
+            self,
+            bbox: tuple[int, int, int, int],
+            frame_w: int,
+            frame_h: int,
+            max_area_ratio: float = 2.0,
+    ) -> tuple[int, int, int, int]:
+        """
+        Expand a bbox to a square if the resulting area is at most
+        max_area_ratio times the original area.
+
+        :param bbox: Bbox (x1, y1, x2, y2).
+        :param frame_w: Frame width (for clipping).
+        :param frame_h: Frame height (for clipping).
+        :param max_area_ratio: Maximum allowed area ratio (square / original).
+        :return: Squared bbox (clipped), or the original bbox.
+        """
+        x1, y1, x2, y2 = bbox
+        w = x2 - x1
+        h = y2 - y1
+        if w <= 0 or h <= 0:
+            return bbox
+
+        side = max(w, h)
+        square_area = side * side
+        original_area = w * h
+        if square_area / original_area > max_area_ratio:
+            return bbox
+
+        cx = (x1 + x2) / 2.0
+        cy = (y1 + y2) / 2.0
+        nx1 = int(max(0, cx - side / 2.0))
+        ny1 = int(max(0, cy - side / 2.0))
+        nx2 = int(min(frame_w, cx + side / 2.0))
+        ny2 = int(min(frame_h, cy + side / 2.0))
+        return nx1, ny1, nx2, ny2
+
     def _group_to_tensor(self, cap, tracks, members, frame_w, frame_h) -> torch.Tensor | None:
         """
         Build a single tensor for one group.
@@ -208,6 +245,10 @@ class GroupCropper:
         x1, y1, x2, y2 = union
         if x2 <= x1 or y2 <= y1:
             return None
+
+        x1, y1, x2, y2 = self._square_bbox(
+            (x1, y1, x2, y2), frame_w, frame_h, max_area_ratio=2.0,
+        )
 
         if self._global_first:
             frame_area = float(frame_w * frame_h)
