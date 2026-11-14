@@ -3,7 +3,7 @@ from src.detector import YoloTrailDetector
 
 
 VIDEO_NAME = '001'
-MODEL_PATH = "../models/detector/yolo/yolov8n.pt"
+MODEL_PATH = "../models/detector/yolo/yolov8m.pt"
 TEST_VIDEO = f"../data/test_traj/video/{VIDEO_NAME}.mp4"
 OUTPUT_VIDEO = f"../data/test_traj/video_traj/{VIDEO_NAME}.mp4"
 OUTPUT_TRAJECTORIES = f"../data/test_traj/traj/{VIDEO_NAME}.json"
@@ -20,5 +20,4 @@ if __name__ == '__main__':
     )
 
     tracks = detector.process_video(TEST_VIDEO, step=1)
-    detector.render_video(TEST_VIDEO, OUTPUT_VIDEO, tracks)
-    detector.save_tracks(OUTPUT_TRAJECTORIES, tracks)
+    # detector.save_tracks(OUTPUT_TRAJECTORIES, tracks)

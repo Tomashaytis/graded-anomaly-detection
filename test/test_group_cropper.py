@@ -1,5 +1,6 @@
 from src.detector import GroupDetector
-from src.utils import GroupCropper, visualize_video
+from src.cropping import GroupCropper
+from src.utils import visualize_video
 
 
 def test():

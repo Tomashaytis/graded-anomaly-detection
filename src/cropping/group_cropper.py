@@ -9,6 +9,9 @@ from pathlib import Path
 from src.detector import GroupDetector
 from src.dataset import VideoLoader
 
+from src.video.base_frame_source import BaseFrameSource
+from src.video.seakable_capture import  SeekableCapture
+
 
 class GroupCropper:
     """
@@ -49,13 +52,22 @@ class GroupCropper:
         self._global_similarity_threshold = global_similarity_threshold
         self._seed = seed
 
-    def get_group_tensors(self, video_path: str, tracks: dict = None, tracks_path: str = None) -> dict[int, torch.Tensor]:
+    def get_group_tensors(
+            self, video_path:
+            str = None,
+            frame_source: BaseFrameSource = None,
+            tracks: dict = None,
+            tracks_path: str = None,
+            frame_offset: int = 0
+    ) -> dict[int, torch.Tensor]:
         """
         Build one tensor per selected group.
 
         :param video_path: Path to the source video.
+        :param frame_source: Frame source.
         :param tracks: Mapping track_id -> (N, 5) array of [frame_id, x1, y1, x2, y2].
         :param tracks_path: Path to the tracks JSON.
+        :param frame_offset: Frame offset.
         :return: Mapping group_id -> tensor (n_samples, 3, size, size) in RGB, values in [0, 1].
         :raises ValueError: If the video cannot be opened or if tracks/tracks_path not set.
         """
@@ -71,7 +83,16 @@ class GroupCropper:
 
         selected = self._select_groups(groups)
 
-        cap = cv2.VideoCapture(video_path)
+        if frame_source is not None:
+            cap = SeekableCapture(frame_source, frame_offset)
+        elif video_path is not None:
+            cap = cv2.VideoCapture(video_path)
+        else:
+            raise ValueError(
+                "Either 'video_path' or 'frame_source' must be provided "
+                f"(got video_path={video_path!r}, frame_source={frame_source!r})"
+            )
+
         if not cap.isOpened():
             raise ValueError(f"Failed to open video: {video_path}")
 
@@ -202,11 +223,11 @@ class GroupCropper:
         ny2 = int(min(frame_h, cy + side / 2.0))
         return nx1, ny1, nx2, ny2
 
-    def _group_to_tensor(self, cap, tracks, members, frame_w, frame_h) -> torch.Tensor | None:
+    def _group_to_tensor(self, cap: cv2.VideoCapture | SeekableCapture, tracks: dict, members: list, frame_w: int, frame_h: int,  frame_offset: int = 0,) -> torch.Tensor | None:
         """
         Build a single tensor for one group.
 
-        :param cap: Opened cv2.VideoCapture.
+        :param cap: Opened video capture.
         :param tracks: Mapping track_id -> (N, 5) array.
         :param members: Track ids of the group.
         :param frame_w: Frame width.
@@ -310,7 +331,7 @@ class GroupCropper:
             ok, frame = cap.read()
             if not ok:
                 continue
-            frame = VideoLoader.reflect_pad_and_resize(frame, (self._size, self._size), ratio_threshold=10, vertical_blur=True)
+            frame = VideoLoader.reflect_pad_and_resize(frame, (self._size, self._size), ratio_threshold=10)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frames.append(frame)
 

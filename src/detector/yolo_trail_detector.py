@@ -2,11 +2,12 @@ import cv2
 import json
 import numpy as np
 
+from tqdm import tqdm
 from pathlib import Path
 from typing import Optional
-
-from tqdm import tqdm
 from ultralytics import YOLO
+
+from src.video import BaseFrameSource, SeekableCapture
 
 
 Tracks = dict[int, list[tuple[int, float, float, float, float]]]
@@ -39,68 +40,112 @@ class YoloTrailDetector:
         :param min_track_length: Minimum track length to be written to JSON.
         :param trail_length: How many recent points to draw per track.
         """
-        self.model_path = model_path
-        self.tracker = tracker
-        self.conf_threshold = conf_threshold
-        self.classes = classes
-        self.min_track_length = min_track_length
-        self.trail_length = trail_length
+        self._model_path = model_path
+        self._tracker = tracker
+        self._conf_threshold = conf_threshold
+        self._classes = classes
+        self._min_track_length = min_track_length
+        self._trail_length = trail_length
 
         self._colors: dict[int, tuple[int, int, int]] = {}
+        self._total_frames = 0
 
-        self._model = YOLO(str(self.model_path))
-        print("YOLO model loaded")
+        self._model = YOLO(str(self._model_path))
 
-    def process_video(self, video_path: str, step: int = 1, interpolate: bool = True) -> Tracks:
+    def process_video(
+            self,
+            video_path: str = None,
+            frame_source: BaseFrameSource = None,
+            step: int = 1,
+            interpolate: bool = True,
+            frame_offset: int = 0,
+            max_frames: int = None,
+            show_progress: bool = False,
+    ) -> Tracks:
         """
         Detect and track objects in a video.
 
         :param video_path: Path to the input video file.
+        :param frame_source: Frame source.
         :param step: Process every N-th frame (1 = every frame).
         :param interpolate: If true, interpolates track gaps.
+        :param frame_offset: Frame offset.
+        :param max_frames: Max frames to read.
+        :param show_progress: If True, shows progress bar.
         :return: Mapping track_id -> list of (frame_id, x1, y1, x2, y2) boxes.
         """
-        video_path = Path(video_path)
-        self._check_video(video_path)
+        if video_path is not None:
+            video_path = Path(video_path)
+            self._check_video(video_path)
+            cap = cv2.VideoCapture(str(video_path))
+            is_external_source = False
+        elif frame_source is not None:
+            cap = SeekableCapture(frame_source, frame_offset=frame_offset)
+            is_external_source = True
+        else:
+            raise ValueError(
+                "Either 'video_path' or 'frame_source' must be provided "
+                f"(got video_path={video_path!r}, frame_source={frame_source!r})"
+            )
 
         history: Tracks = {}
-
-        cap = cv2.VideoCapture(str(video_path))
         frame_id = 0
-        try:
+
+        if max_frames is not None:
+            total_rendered = (max_frames + step - 1) // step
+        elif video_path is not None:
             total_rendered = (self._total_frames + step - 1) // step
-            with tqdm(total=total_rendered, desc="Processing video", unit="frame") as pbar:
-                while True:
-                    ok, frame = cap.read()
-                    if not ok:
-                        break
+        else:
+            total_rendered = None
 
-                    if frame_id % step == 0:
-                        dets = self._detect_objects(frame)
-                        dets = [d for d in dets
-                                if d[4] >= self.conf_threshold
-                                and (self.classes is None or d[5] in self.classes)]
+        pbar = tqdm(total=total_rendered, desc="Processing video", unit="frame") \
+            if show_progress else None
 
-                        if dets:
-                            tracks = self.tracker.update(dets, frame)
-                            for tid, x1, y1, x2, y2, *_ in tracks:
-                                tid = int(tid)
-                                if tid < 0:
-                                    continue
-                                history.setdefault(tid, []).append(
-                                    (frame_id, float(x1), float(y1),
-                                     float(x2), float(y2))
-                                )
+        try:
+            while True:
+                if max_frames is not None and frame_id >= max_frames:
+                    break
 
+                ok, frame = cap.read()
+                if not ok:
+                    break
+
+                if frame_id % step == 0:
+                    dets = self._detect_objects(frame)
+                    dets = [d for d in dets
+                            if d[4] >= self._conf_threshold
+                            and (self._classes is None or d[5] in self._classes)]
+
+                    if dets:
+                        tracks = self._tracker.update(dets, frame)
+                        for tid, x1, y1, x2, y2, *_ in tracks:
+                            tid = int(tid)
+                            if tid < 0:
+                                continue
+                            history.setdefault(tid, []).append(
+                                (frame_id,
+                                 float(x1), float(y1),
+                                 float(x2), float(y2))
+                            )
+                    if pbar is not None:
                         pbar.update(1)
                         pbar.set_postfix(tracks=len(history))
 
-                    frame_id += 1
+                frame_id += 1
         finally:
-            cap.release()
+            if pbar is not None:
+                pbar.close()
+            if not is_external_source:
+                cap.release()
 
         if interpolate:
-            history = self._interpolate(history, start_frame=0, end_frame=frame_id, extend_edges=True)
+            history = self._interpolate(
+                history,
+                start_frame=0,
+                end_frame=frame_id,
+                extend_edges=True,
+                min_segment_length=self._min_track_length,
+            )
 
         return history
 
@@ -118,7 +163,7 @@ class YoloTrailDetector:
             int(tid): [[int(f), float(x1), float(y1), float(x2), float(y2)]
                        for f, x1, y1, x2, y2 in pts]
             for tid, pts in tracks.items()
-            if len(pts) >= self.min_track_length
+            if len(pts) >= self._min_track_length
         }
         Path(output_path).write_text(json.dumps(clean, indent=2))
 
@@ -316,7 +361,7 @@ class YoloTrailDetector:
         """
         color = self._color(tid)
 
-        visible = [p for p in pts if p[0] <= frame_id][-self.trail_length:]
+        visible = [p for p in pts if p[0] <= frame_id][-self._trail_length:]
         if not visible:
             return
 
@@ -354,5 +399,5 @@ class YoloTrailDetector:
         self._fps = cap.get(cv2.CAP_PROP_FPS)
         self._frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self._frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self._total_frames = int(cap.cv2.CAP_PROP_FRAME_COUNT) if False else int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self._total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         cap.release()

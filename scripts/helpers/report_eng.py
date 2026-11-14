@@ -1,13 +1,16 @@
 import os
 import yaml
 import random
+import rootutils
 import pandas as pd
 import matplotlib.pyplot as plt
 
 from pathlib import Path
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
-DEFAULT_CONFIG_PATH = os.path.join('../..', 'configs', 'default.yaml')
+root = rootutils.setup_root(__file__, indicator=".git", pythonpath=True, cwd=True)
+
+DEFAULT_CONFIG_PATH = os.path.join('configs', 'train.yaml')
 EVAL_FOLDER = 'eval_i3d_r50_best-epoch=08-val_acc=0.787'
 MODEL_NAME = 'I3D-8x8-R50'
 
@@ -34,7 +37,7 @@ if __name__ == '__main__':
     with open(DEFAULT_CONFIG_PATH, 'r') as f:
         config = yaml.safe_load(f)
 
-    eval_dir = Path('../..') / Path(config['paths']['output_dir']) / 'results' / 'sh' / EVAL_FOLDER
+    eval_dir = Path(config['paths']['output_dir']) / 'results' / 'sh' / EVAL_FOLDER
 
     metrics_df = pd.read_csv(eval_dir / 'per_class_metrics.csv')
 
@@ -96,12 +99,12 @@ if __name__ == '__main__':
         'taking photo',
         'looking at phone',
         'talking on cell phone',
-        'opening door',
+        'arguing',
         'assembling computer',
         'shooting',
         'smoking',
         'assault',
-        'closing door',
+        'breaking glass',
         'explosion',
         'vandalism',
     ]
