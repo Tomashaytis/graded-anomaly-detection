@@ -3,14 +3,13 @@ Main CLI Module
 """
 
 import os
-import sys
 import json
-
-import numpy as np
 import yaml
 import typer
 import torch
 import warnings
+import rootutils
+import numpy as np
 import pandas as pd
 import lightning as L
 
@@ -30,11 +29,9 @@ from src.datamodules import VideoDataModule
 from src.dataset import AnnotationGenerator, LMDBCreator
 from src.models import create_model
 
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
+root = rootutils.setup_root(__file__, indicator='.git', pythonpath=True, cwd=True)
 
-DEFAULT_CONFIG_PATH = os.path.join('configs', 'default.yaml')
+DEFAULT_CONFIG_PATH = os.path.join('configs', 'train.yaml')
 
 app = typer.Typer()
 
