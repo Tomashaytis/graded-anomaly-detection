@@ -1,0 +1,180 @@
+# Preprocessing configuration
+preprocessing:
+  window_size_sec: 15.0
+  tracker: 'bytetrack'  # bytetrack, botsort, deepsort
+  reid_path: null
+  detector_path: "models/detector/yolo/yolov8m.pt"
+  min_track_length: 10
+  group_method: "hdbscan"  # spectral, dbscan, hdbscan
+  n_top: 2
+  n_random: 1
+  global_first: True
+
+# Postprocessing configuration
+postprocessing:
+  global_danger_threshold: 0.5
+  local_danger_threshold: 0.3
+
+# Model configuration
+model:
+  id2label_path: "data/dataset/id2label.json"
+  preset: "i3d_f32_mh"
+  available_presets:
+    - i3d_f32_mh
+    - slowfast_f32_mh
+    - x3dm_f32_mh
+    - timesformer_f32_mh
+    - timesformer_f16_mh
+    - videomae_f16_mh
+
+# Model presets
+model_presets:
+  i3d_f32_mh:
+    checkpoint_path: "runs/best_checkpoints/best-i3d-f32-mh-mae1=0.106-acc2=0.806.ckpt"
+    video_frame_size: 224
+    video_n_frames: 32
+    batch_size: 4
+    dropout: 0.5
+
+  slowfast_f32_mh:
+    checkpoint_path: "runs/best_checkpoints/best-slowfast-f32-mh-mae1=0.104-acc2=0.816.ckpt"
+    video_frame_size: 224
+    video_n_frames: 32
+    batch_size: 4
+    dropout: 0.5
+
+  x3dm_f32_mh:
+    checkpoint_path: "runs/best_checkpoints/best-x3dm-f32-mh-mae1=0.093-acc2=0.817.ckpt"
+    video_frame_size: 224
+    video_n_frames: 32
+    batch_size: 4
+    dropout: 0.5
+
+  timesformer_f32_mh:
+    checkpoint_path: "runs/best_checkpoints/best-timesformer-f32-mh-mae1=0.077-acc2=0.850.ckpt"
+    video_frame_size: 224
+    video_n_frames: 32
+    batch_size: 4
+    dropout: 0.5
+
+  timesformer_f16_mh:
+    checkpoint_path: "runs/best_checkpoints/best-timesformer-f16-mh-mae1=0.088-acc2=0.855.ckpt"
+    video_frame_size: 224
+    video_n_frames: 16
+    batch_size: 4
+    dropout: 0.5
+
+  videomae_f16_mh:
+    checkpoint_path: "runs/best_checkpoints/best-videomae-f16-mh-mae1=0.118-acc2=0.789.ckpt"
+    video_frame_size: 224
+    video_n_frames: 16
+    batch_size: 4
+    dropout: 0.5
+
+# Danger levels
+danger_levels:
+  0:
+    name: "normal"
+    weight: 0.0
+  1:
+    name: "context"
+    weight: 0.4
+  2:
+    name: "low"
+    weight: 0.7
+  3:
+    name: "high"
+    weight: 1.0
+
+# Actions
+action_categories:
+  normal:
+    - { name: normal, id: -1, danger_level: 0 }
+  overcoming obstacles:
+    - { name: rock climbing, id: 32, danger_level: 3 }
+    - { name: burglary, id: 7, danger_level: 3 }
+    - { name: abseiling, id: 0, danger_level: 3 }
+    - { name: climbing a rope, id: 9, danger_level: 3 }
+    - { name: parkour, id: 31, danger_level: 3 }
+    - { name: turnstile jumping, id: 46, danger_level: 3 }
+    - { name: crawling, id: 15, danger_level: 3 }
+    - { name: climbing tree, id: 11, danger_level: 2 }
+    - { name: jumping, id: 27, danger_level: 1 }
+    - { name: climbing ladder, id: 10, danger_level: 1 }
+  violence:
+    - { name: kicking, id: 28, danger_level: 3 }
+    - { name: fighting, id: 21, danger_level: 3 }
+    - { name: drop kicking, id: 17, danger_level: 3 }
+    - { name: tackling, id: 41, danger_level: 3 }
+    - { name: wrestling, id: 55, danger_level: 3 }
+    - { name: headbutting, id: 24, danger_level: 3 }
+    - { name: assault, id: 4, danger_level: 3 }
+    - { name: abuse, id: 1, danger_level: 3 }
+    - { name: slapping, id: 36, danger_level: 2 }
+    - { name: arguing, id: 2, danger_level: 2 }
+    - { name: sword fighting, id: 40, danger_level: 2 }
+  using items and weapons:
+    - { name: shooting, id: 34, danger_level: 3 }
+    - { name: throwing something, id: 45, danger_level: 2 }
+    - { name: chiseling, id: 8, danger_level: 1 }
+    - { name: welding, id: 52, danger_level: 1 }
+    - { name: using a sledge hammer, id: 48, danger_level: 1 }
+    - { name: sawing wood, id: 33, danger_level: 1 }
+    - { name: using a power drill, id: 47, danger_level: 1 }
+    - { name: using circular saw, id: 50, danger_level: 1 }
+    - { name: using a wrench, id: 49, danger_level: 1 }
+  strange:
+    - { name: smoking, id: 38, danger_level: 2 }
+    - { name: shredding paper, id: 35, danger_level: 2 }
+    - { name: collecting garbage, id: 12, danger_level: 1 }
+    - { name: counting money, id: 14, danger_level: 1 }
+    - { name: huddling, id: 25, danger_level: 1 }
+    - { name: staring, id: 39, danger_level: 1 }
+  computer usage:
+    - { name: destroying computer, id: 16, danger_level: 3 }
+    - { name: assembling computer, id: 5, danger_level: 2 }
+    - { name: talking on cell phone, id: 43, danger_level: 1 }
+    - { name: looking at phone, id: 30, danger_level: 1 }
+    - { name: taking photo, id: 42, danger_level: 1 }
+    - { name: texting, id: 44, danger_level: 1 }
+    - { name: computer use, id: 13, danger_level: 1 }
+    - { name: wiring, id: 53, danger_level: 1 }
+    - { name: working with electric panel, id: 54, danger_level: 1 }
+  vandalism:
+    - { name: graffiti, id: 23, danger_level: 3 }
+    - { name: lighting fire, id: 29, danger_level: 3 }
+    - { name: smashing, id: 37, danger_level: 3 }
+    - { name: breaking glass, id: 6, danger_level: 3 }
+    - { name: arson, id: 3, danger_level: 3 }
+    - { name: vandalism, id: 51, danger_level: 3 }
+  inadequate condition:
+    - { name: falling off chair, id: 20, danger_level: 2 }
+    - { name: faceplanting, id: 19, danger_level: 2 }
+    - { name: jogging, id: 26, danger_level: 1 }
+  emergency:
+    - { name: fire, id: 22, danger_level: 3 }
+    - { name: explosion, id: 18, danger_level: 3 }
+
+# Contextual settings
+context:
+  climbing ladder: false
+  jumping: false
+  chiseling: false
+  welding: false
+  using a sledge hammer: false
+  sawing wood: false
+  using a power drill: false
+  using circular saw: false
+  using a wrench: false
+  collecting garbage: false
+  counting money: false
+  huddling: false
+  staring: false
+  talking on cell phone: false
+  looking at phone: false
+  taking photo: false
+  texting: false
+  computer use: false
+  wiring: false
+  working with electric panel: false
+  jogging: false
