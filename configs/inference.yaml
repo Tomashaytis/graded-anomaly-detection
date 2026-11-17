@@ -18,7 +18,7 @@ postprocessing:
 # Model configuration
 model:
   id2label_path: "data/dataset/id2label.json"
-  preset: "i3d_f32_mh"
+  preset: "x3dm_f32_mh"
   available_presets:
     - i3d_f32_mh
     - slowfast_f32_mh
@@ -30,6 +30,7 @@ model:
 # Model presets
 model_presets:
   i3d_f32_mh:
+    name: i3d_r50_mh
     checkpoint_path: "runs/best_checkpoints/best-i3d-f32-mh-mae1=0.106-acc2=0.806.ckpt"
     video_frame_size: 224
     video_n_frames: 32
@@ -37,6 +38,7 @@ model_presets:
     dropout: 0.5
 
   slowfast_f32_mh:
+    name: slowfast_r50_mh
     checkpoint_path: "runs/best_checkpoints/best-slowfast-f32-mh-mae1=0.104-acc2=0.816.ckpt"
     video_frame_size: 224
     video_n_frames: 32
@@ -44,6 +46,7 @@ model_presets:
     dropout: 0.5
 
   x3dm_f32_mh:
+    name: x3d_m_mh
     checkpoint_path: "runs/best_checkpoints/best-x3dm-f32-mh-mae1=0.093-acc2=0.817.ckpt"
     video_frame_size: 224
     video_n_frames: 32
@@ -51,6 +54,7 @@ model_presets:
     dropout: 0.5
 
   timesformer_f32_mh:
+    name: timesformer_mh
     checkpoint_path: "runs/best_checkpoints/best-timesformer-f32-mh-mae1=0.077-acc2=0.850.ckpt"
     video_frame_size: 224
     video_n_frames: 32
@@ -58,6 +62,7 @@ model_presets:
     dropout: 0.5
 
   timesformer_f16_mh:
+    name: timesformer_mh
     checkpoint_path: "runs/best_checkpoints/best-timesformer-f16-mh-mae1=0.088-acc2=0.855.ckpt"
     video_frame_size: 224
     video_n_frames: 16
@@ -65,6 +70,7 @@ model_presets:
     dropout: 0.5
 
   videomae_f16_mh:
+    name: videomae_mh
     checkpoint_path: "runs/best_checkpoints/best-videomae-f16-mh-mae1=0.118-acc2=0.789.ckpt"
     video_frame_size: 224
     video_n_frames: 16

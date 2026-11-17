@@ -163,6 +163,10 @@ class GroupDetector:
         :param matrix_a: Matrix with features.
         :return: Labels.
         """
+        n = matrix_a.shape[0]
+        if n <= 1:
+            return np.zeros(n, dtype=int)
+
         d = 1.0 - matrix_a
         np.fill_diagonal(d, 0.0)
         d = np.clip(d, 0.0, 1.0)

@@ -125,7 +125,7 @@ class SlowFastR50MultiHead(BaseVideoModel):
 
         alpha = 4
         slow_indices = torch.arange(0, num_frames, alpha, device=x.device)
-        slow_pathway = x[:, :, slow_indices, :, :]  # (B, C, T/4, H, W)
+        slow_pathway = x[:, :, slow_indices, :, :]
 
         fast_pathway = x  # (B, C, T, H, W)
 

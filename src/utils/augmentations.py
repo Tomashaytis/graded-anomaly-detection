@@ -99,11 +99,11 @@ def create_complex_augmentations(
     ])
 
     optional_pool: List[BaseAugmentation] = [
-        ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, p=0.5),
-        RandomRotation(degrees=10, p=0.3),
-        RandomErasing(p=0.25),
-        TimeMasking(p=0.3),
-        GaussianNoise(std=0.02, p=0.2),
+        ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, p=1.0),
+        RandomRotation(degrees=10, p=1.0),
+        RandomErasing(p=1.0),
+        TimeMasking(p=1.0),
+        GaussianNoise(std=0.02, p=1.0),
     ]
     if not required_resized_crop:
         optional_pool.append(RandomResizedCrop(target_size, scale=(0.8, 1.0)),)

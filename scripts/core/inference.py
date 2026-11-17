@@ -1,9 +1,11 @@
 import os
 import json
 import yaml
+import queue
 import torch
 import argparse
 import warnings
+import threading
 import rootutils
 
 from pathlib import Path
@@ -81,7 +83,7 @@ def inference(config: dict, video_path: str):
         global_first=preprocessing_config['global_first'],
     )
 
-    with open(model_config['id2label_path'], 'r', encoding='utf-8') as f:
+    with open(config['model']['id2label_path'], 'r', encoding='utf-8') as f:
         id2label = {int(k): v for k, v in json.load(f).items()}
 
     model = create_model(
@@ -127,89 +129,141 @@ def inference(config: dict, video_path: str):
         for a in cat
     }
 
-    window_start = 0
-    while True:
-        tracks = detector.process_video(
-            frame_source=source,
-            step=1,
-            frame_offset=window_start,
-            max_frames=window_size
-        )
+    batch_queue: queue.Queue = queue.Queue(maxsize=4)
+    stop_event = threading.Event()
 
-        tensors = group_cropper.get_group_tensors(
-            frame_source=source,
-            tracks=tracks,
-            frame_offset=window_start
-        )
+    def safe_put(item):
+        """Save put in queue"""
+        while not stop_event.is_set():
+            try:
+                batch_queue.put(item, timeout=0.5)
+                return True
+            except queue.Full:
+                continue
+        return False
 
-        items = list(tensors.items())[:batch_size]
-
-        if items:
-            gids = [gid for gid, _ in items]
-            batch = torch.stack([t for _, t in items], dim=0).to(device)
-
-            with torch.no_grad():
-                logits1, logits2 = model(batch)
-                level_probs = torch.sigmoid(logits1.squeeze(-1))
-
-            for i, gid in enumerate(gids):
-                level_prob = level_probs[i].item()
-
-                is_global = preprocessing_config['global_first'] and gid == 0
-                threshold = (
-                    postprocessing_config['global_danger_threshold']
-                    if is_global
-                    else postprocessing_config['local_danger_threshold']
+    def producer():
+        """Data producer"""
+        window_start = 0
+        try:
+            while not stop_event.is_set():
+                tracks = detector.process_video(
+                    frame_source=source,
+                    step=1,
+                    frame_offset=window_start,
+                    max_frames=window_size,
                 )
+                tensors = group_cropper.get_group_tensors(
+                    frame_source=source,
+                    tracks=tracks,
+                    frame_offset=window_start,
+                )
+                items = list(tensors.items())[:batch_size]
 
-                if level_prob < threshold:
+                if items:
+                    gids = [gid for gid, _ in items]
+                    batch = torch.stack([t for _, t in items], dim=0)
+                    batch = batch.permute(0, 2, 1, 3, 4)
+
+                    safe_put((window_start, gids, batch))
+
+                if isinstance(source, StreamFrameSource):
+                    source.clean_buffer()
+
+                window_start += window_size
+                if source.frame_count() <= window_start:
+                    break
+        finally:
+            safe_put(None)
+            stop_event.set()
+
+    def consumer():
+        """Data consumer"""
+        try:
+            while True:
+                item = batch_queue.get()
+                if item is None:
+                    break
+
+                window_start, gids, batch = item
+                batch = batch.to(device, non_blocking=True)
+
+                with torch.no_grad():
+                    logits1, logits2 = model(batch)
+                    level_probs = torch.sigmoid(logits1.squeeze(-1))
+
+                for i, gid in enumerate(gids):
+                    level_prob = level_probs[i].item()
+
+                    is_global = preprocessing_config['global_first'] and gid == 0
+                    threshold = (
+                        postprocessing_config['global_danger_threshold']
+                        if is_global
+                        else postprocessing_config['local_danger_threshold']
+                    )
+
+                    if level_prob < threshold:
+                        print(
+                            f"[window={window_start}, gid={gid}] "
+                            f"normal (level_prob={level_prob:.3f}, thr={threshold})"
+                        )
+                        continue
+
+                    pred_level = min(
+                        level_weights,
+                        key=lambda lvl: abs(level_weights[lvl] - level_prob),
+                    )
+                    pred_level_name = level_names[pred_level]
+
+                    action_probs = torch.softmax(logits2[i], dim=-1)
+                    action_id = int(action_probs.argmax().item())
+                    action_prob = float(action_probs[action_id].item())
+                    action_name = id2label[action_id]
+
+                    action_danger_level = action_to_level.get(action_name)
+
+                    effective_level = max(pred_level, action_danger_level or 0)
+
+                    if effective_level <= 0:
+                        is_anomaly = False
+                    elif effective_level == 1:
+                        is_anomaly = contextual_settings.get(action_name, False)
+                    else:
+                        is_anomaly = True
+
                     print(
                         f"[window={window_start}, gid={gid}] "
-                        f"normal (level_prob={level_prob:.3f}, thr={threshold})"
+                        f"level_prob={level_prob:.3f} (thr={threshold}) → "
+                        f"pred_level={pred_level} ({pred_level_name}), "
+                        f"action={action_name} ({action_prob:.3f}), "
+                        f"action_level={action_danger_level}, "
+                        f"effective_level={effective_level} ({level_names[effective_level]}), "
+                        f"anomaly={is_anomaly}"
                     )
-                    continue
 
-                pred_level = min(
-                    level_weights,
-                    key=lambda lvl: abs(level_weights[lvl] - level_prob),
-                )
-                pred_level_name = level_names[pred_level]
+                batch_queue.task_done()
+        except Exception as e:
+            print(f"[consumer] crashed: {e}")
+            stop_event.set()
+            try:
+                batch_queue.put_nowait(None)
+            except queue.Full:
+                pass
 
-                action_probs = torch.softmax(logits2[i], dim=-1)
-                action_id = int(action_probs.argmax().item())
-                action_prob = float(action_probs[action_id].item())
-                action_name = id2label[action_id]
+    producer_thread = threading.Thread(target=producer, daemon=True)
+    consumer_thread = threading.Thread(target=consumer, daemon=True)
 
-                action_danger_level = action_to_level.get(action_name)
-
-                effective_level = max(pred_level, action_danger_level or 0)
-
-                if effective_level <= 0:
-                    is_anomaly = False
-                elif effective_level == 1:
-                    is_anomaly = contextual_settings.get(action_name, False)
-                else:
-                    is_anomaly = True
-
-                print(
-                    f"[window={window_start}, gid={gid}] "
-                    f"level_prob={level_prob:.3f} (thr={threshold}) → "
-                    f"pred_level={pred_level} ({pred_level_name}), "
-                    f"action={action_name} ({action_prob:.3f}), "
-                    f"action_level={action_danger_level}, "
-                    f"effective_level={effective_level} ({level_names[effective_level]}), "
-                    f"anomaly={is_anomaly}"
-                )
-
-        if isinstance(source, StreamFrameSource):
-            source.clean_buffer()
-
-        window_start += window_size
-
-        if source.frame_count() <= window_start:
-            break
-
-    source.release()
+    try:
+        producer_thread.start()
+        consumer_thread.start()
+        producer_thread.join()
+        consumer_thread.join()
+    except KeyboardInterrupt:
+        stop_event.set()
+        producer_thread.join(timeout=1.0)
+        consumer_thread.join(timeout=1.0)
+    finally:
+        source.release()
 
 
 def main():
