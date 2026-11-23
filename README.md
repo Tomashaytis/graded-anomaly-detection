@@ -8,12 +8,12 @@ This project addresses anomaly detection in restricted-zone surveillance, where 
 
 ## Severity Levels
 
-| Level | Label | Description | Examples |
-|---|---|---|---|
-| 0 | Normal | Allowed actions | walking, reading, writing |
-| 1 | Low | Allowed but not always | computer use, phone use, counting money |
-| 2 | High | Suspicious, requires attention | smoking, raking photo, arguing |
-| 3 | Critical | Explicit violations | fighting, arson, robbery, shooting |
+| Level | Label   | Description | Examples |
+|---|---------|---|---|
+| 0 | Normal  | Allowed actions | walking, reading, writing |
+| 1 | Context | Allowed but not always | computer use, phone use, counting money |
+| 2 | Low     | Suspicious, requires attention | smoking, raking photo, arguing |
+| 3 | High    | Explicit violations | fighting, arson, robbery, shooting |
 
 ## Architecture
 

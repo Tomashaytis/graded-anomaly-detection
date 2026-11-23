@@ -82,7 +82,7 @@ def plot_model_summary(config):
     plt.rcParams["font.size"] = 11
     plt.rcParams["axes.linewidth"] = 0.8
 
-    fig, axes = plt.subplots(1, 2, figsize=figsize)
+    fig, axes = plt.subplots(1, 2, figsize=figsize, gridspec_kw={"width_ratios": [1, 0.7]})
     fig.patch.set_facecolor("white")
     fig.subplots_adjust(wspace=2, left=0.08, right=0.95, top=0.85, bottom=0.15)
     ax1, ax2 = axes
@@ -91,6 +91,8 @@ def plot_model_summary(config):
 
     cm_norm = level_cm / (level_cm.sum(axis=1, keepdims=True) + 1e-10)
     ax1.imshow(cm_norm, cmap="Blues", vmin=0, vmax=1)
+    ax1.set_aspect("equal")
+    ax1.set_anchor("N")
     ax1.set_xticks(np.arange(len(level_names)))
     ax1.set_yticks(np.arange(len(level_names)))
     ax1.set_xticklabels(level_names, fontsize=10)
@@ -123,9 +125,8 @@ def plot_model_summary(config):
 
     fig.suptitle(
         t["suptitle"].format(name=model_name, n_frames=n_frames),
-        fontsize=15, fontweight="bold", y=1.02
+        fontsize=16, fontweight="bold", y=0.98
     )
-
     plt.tight_layout()
 
     suffix = "ru" if lang == "ru" else "en"
@@ -332,12 +333,11 @@ def plot_models_comparison(config):
     t = config["texts"][lang]
 
     short_names = {
-        "i3d_f32": "I3D-8x8-R50 (f32)",
-        "slowfast_f32": "SlowFast-8x8-R50 (f32)",
-        "x3dm_f32": "X3D-M (f32)",
-        "timesformer_f32": "TimeSformer (f32)",
-        "timesformer_f16": "TimeSformer (f16)",
-        "videomae_f16": "VideoMAE (f16)",
+        "i3d_f32": "I3D-8x8-R50",
+        "slowfast_f32": "SlowFast-8x8-R50",
+        "x3dm_f32": "X3D-M",
+        "timesformer_f16": "TimeSformer",
+        "videomae_f16": "VideoMAE",
     }
 
     rows = []
@@ -360,7 +360,7 @@ def plot_models_comparison(config):
     plt.rcParams["ytick.color"] = "#333333"
 
     fig, axes = plt.subplots(
-        1, 2, figsize=(14, 6),
+        1, 2, figsize=(12, 6),
         gridspec_kw={"width_ratios": [1.0, 1.0]},
     )
     fig.patch.set_facecolor("white")
@@ -433,12 +433,11 @@ def plot_models_f1_trend(config, reference_key: str | None = None,
     reference_key = reference_key or config["default_model"]
 
     short_names = {
-        "i3d_f32": "I3D-8x8-R50 (f32)",
-        "slowfast_f32": "SlowFast-8x8-R50 (f32)",
-        "x3dm_f32": "X3D-M (f32)",
-        "timesformer_f32": "TimeSformer (f32)",
-        "timesformer_f16": "TimeSformer (f16)",
-        "videomae_f16": "VideoMAE (f16)",
+        "i3d_f32": "I3D-8x8-R50",
+        "slowfast_f32": "SlowFast-8x8-R50",
+        "x3dm_f32": "X3D-M",
+        "timesformer_f16": "TimeSformer",
+        "videomae_f16": "VideoMAE",
     }
 
     per_model = {}
@@ -457,7 +456,6 @@ def plot_models_f1_trend(config, reference_key: str | None = None,
 
     x = np.arange(len(class_order))
 
-    # ---- compute all plotted series first (to set tight ylim) ----
     series = {}
     for key in config["models"]:
         y = aligned[key].values.astype(float)
@@ -477,13 +475,12 @@ def plot_models_f1_trend(config, reference_key: str | None = None,
     pad = (y_max - y_min) * 0.10 if y_max > y_min else 0.02
     y_lo, y_hi = y_min - pad, y_max + pad
 
-    # ---- styling: narrower X, taller Y ----
     plt.rcParams["font.family"] = "serif"
     plt.rcParams["font.size"] = 12
     plt.rcParams["axes.linewidth"] = 0.8
     plt.rcParams["axes.edgecolor"] = "#333333"
 
-    fig, ax = plt.subplots(figsize=(9, 9))   # ← was (14, 6.5)
+    fig, ax = plt.subplots(figsize=(9, 9))
     fig.patch.set_facecolor("white")
     fig.subplots_adjust(left=0.11, right=0.97, top=0.90, bottom=0.10)
 
@@ -491,13 +488,14 @@ def plot_models_f1_trend(config, reference_key: str | None = None,
         "i3d_f32": "#1f77b4",
         "slowfast_f32": "#ff7f0e",
         "x3dm_f32": "#2ca02c",
-        "timesformer_f32": "#d62728",
         "timesformer_f16": "#9467bd",
         "videomae_f16": "#8c564b",
     }
     markers = {
-        "i3d_f32": "o", "slowfast_f32": "s", "x3dm_f32": "^",
-        "timesformer_f32": "D", "timesformer_f16": "v",
+        "i3d_f32": "o",
+        "slowfast_f32": "s",
+        "x3dm_f32": "^",
+        "timesformer_f16": "v",
         "videomae_f16": "P",
     }
 
@@ -517,7 +515,6 @@ def plot_models_f1_trend(config, reference_key: str | None = None,
                     markevery=max(1, len(x) // 14),
                     alpha=0.9, label=label)
 
-    # threshold lines only if they fall inside the visible range
     for lvl, col in ((0.5, "red"), (0.8, "green")):
         if y_lo <= lvl <= y_hi:
             ax.axhline(lvl, color=col, linestyle="--", alpha=0.55, linewidth=1.0)
@@ -536,10 +533,9 @@ def plot_models_f1_trend(config, reference_key: str | None = None,
     ax.set_title(title_tpl.format(n=len(class_order)), fontweight="bold",
                  fontsize=13, pad=12)
 
-    # ---- compressed X: fewer ticks, no class names ----
     ax.set_xlim(0, len(x) - 1)
     ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=8, integer=True))
-    ax.set_ylim(y_lo, y_hi)   # ← tight, data-driven
+    ax.set_ylim(y_lo, y_hi)
 
     ax.grid(True, alpha=0.25, linestyle="--", linewidth=0.7)
     ax.set_axisbelow(True)
@@ -561,9 +557,9 @@ if __name__ == "__main__":
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
-    # plot_model_summary(config)
+    plot_model_summary(config)
     # plot_sorted_f1_with_extremes(config)
     # plot_radar_by_category(config)
     # plot_models_comparison(config)
-    plot_models_f1_trend(config, reference_key="timesformer_f32", mode="cumulative")
-    plot_models_f1_trend(config, reference_key="timesformer_f32", mode="raw")
+    # plot_models_f1_trend(config, reference_key="timesformer_f16", mode="cumulative")
+    # plot_models_f1_trend(config, reference_key="timesformer_f16", mode="raw")

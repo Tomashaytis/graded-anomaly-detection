@@ -8,12 +8,18 @@ preprocessing:
   group_method: "dbscan"  # spectral, dbscan, hdbscan
   n_top: 3
   n_random: 0
-  global_first: True
+  global_first: true
 
 # Postprocessing configuration
 postprocessing:
   global_danger_threshold: 0.5
   local_danger_threshold: 0.3
+  enable_filtration: true
+  min_action_prob: 0.45
+  filter_rules:
+    - { level: [1], mode: "all", k: 3, n: 6 }
+    - { level: [2, 3], mode: "global", k: 1, n: 1 }
+    - { level: [2, 3], mode: "local", k: 2, n: 3 }
 
 # Model configuration
 model:
