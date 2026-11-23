@@ -63,6 +63,17 @@ texts:
     radar_precision: "Precision"
     radar_recall: "Recall"
     radar_f1: "F1-score"
+    cmp_suptitle: "Models comparison across both heads"
+    cmp_mae_title: "(a) Head 1: danger-level MAE"
+    cmp_f1_title: "(b) Head 2: Macro F1-Score"
+    cmp_mae_xlabel: "MAE"
+    cmp_f1_xlabel: "Macro F1-Score"
+    trend_suptitle: "F1-score trend across all classes for all models"
+    trend_xlabel: "Class index"
+    trend_ylabel_cum: "Running mean F1-score"
+    trend_ylabel_raw: "F1-score"
+    trend_title_cum: "Cumulative F1-score growth across {n} classes"
+    trend_title_raw: "Per-class F1-score across {n} classes"
   ru:
     category_normal: "Обычные действия"
     category_overcoming: "Преодоление препятствий"
@@ -96,6 +107,17 @@ texts:
     radar_precision: "Precision"
     radar_recall: "Recall"
     radar_f1: "F1-score"
+    cmp_suptitle: "Сравнение моделей по обеим головам"
+    cmp_mae_title: "(а) Голова 1: MAE уровня опасности"
+    cmp_f1_title: "(б) Голова 2: Macro F1-Score"
+    cmp_mae_xlabel: "MAE"
+    cmp_f1_xlabel: "Macro F1-Score"
+    trend_suptitle: "Динамика F1-score по всем классам для всех моделей"
+    trend_xlabel: "Индекс класса"
+    trend_ylabel_cum: "Накопленное среднее F1-Score"
+    trend_ylabel_raw: "F1-Score"
+    trend_title_cum: "Накопленный рост F1-Score по {n} классам"
+    trend_title_raw: "F1-Score по {n} классам"
 
 category_keys:
   normal: "category_normal"
@@ -107,8 +129,6 @@ category_keys:
   vandalism: "category_vandalism"
   inadequate condition: "category_inadequate"
   emergency: "category_emergency"
-
-# ... (всё, что было) ...
 
 class_translations:
   normal: "Normal behavior"

@@ -133,7 +133,7 @@ def inference(config: dict, video_path: str):
     stop_event = threading.Event()
 
     def safe_put(item):
-        """Save put in queue"""
+        """Save put in queue."""
         while not stop_event.is_set():
             try:
                 batch_queue.put(item, timeout=0.5)
@@ -143,7 +143,7 @@ def inference(config: dict, video_path: str):
         return False
 
     def producer():
-        """Data producer"""
+        """Data producer."""
         window_start = 0
         try:
             while not stop_event.is_set():
@@ -178,7 +178,7 @@ def inference(config: dict, video_path: str):
             stop_event.set()
 
     def consumer():
-        """Data consumer"""
+        """Data consumer."""
         try:
             while True:
                 item = batch_queue.get()

@@ -322,10 +322,248 @@ def plot_radar_by_category(config):
     print(f"Saved: {out_path}")
 
 
+def plot_models_comparison(config):
+    """
+    Compare all models on both heads: head 1 MAE and head 2 macro-F1.
+
+    :param config: Report config.
+    """
+    lang = config["default_lang"]
+    t = config["texts"][lang]
+
+    short_names = {
+        "i3d_f32": "I3D-8x8-R50 (f32)",
+        "slowfast_f32": "SlowFast-8x8-R50 (f32)",
+        "x3dm_f32": "X3D-M (f32)",
+        "timesformer_f32": "TimeSformer (f32)",
+        "timesformer_f16": "TimeSformer (f16)",
+        "videomae_f16": "VideoMAE (f16)",
+    }
+
+    rows = []
+    for key, mcfg in config["models"].items():
+        with open(Path(mcfg["eval_dir"]) / "test_results.yaml", "r") as f:
+            r = yaml.safe_load(f)
+        rows.append({
+            "key": key,
+            "label": short_names.get(key, mcfg["name"]),
+            "mae1": float(r["head1_mae"]),
+            "f1_macro": float(r["head2_f1_macro"]),
+        })
+    df = pd.DataFrame(rows)
+
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.size"] = 12
+    plt.rcParams["axes.linewidth"] = 0.8
+    plt.rcParams["axes.edgecolor"] = "#333333"
+    plt.rcParams["xtick.color"] = "#333333"
+    plt.rcParams["ytick.color"] = "#333333"
+
+    fig, axes = plt.subplots(
+        1, 2, figsize=(14, 6),
+        gridspec_kw={"width_ratios": [1.0, 1.0]},
+    )
+    fig.patch.set_facecolor("white")
+    fig.subplots_adjust(wspace=0.55, left=0.11, right=0.96, top=0.86, bottom=0.16)
+    ax_mae, ax_f1 = axes
+
+    # ---------- (a) Head 1: MAE ----------
+    d = df.sort_values("mae1", ascending=True).reset_index(drop=True)
+    norm = d["mae1"] / d["mae1"].max()
+    colors = plt.cm.Blues(1.0 - 0.55 * norm)
+    bars = ax_mae.barh(d["label"], d["mae1"], color=colors,
+                       edgecolor="#222222", linewidth=0.6, height=0.65)
+    for bar, val in zip(bars, d["mae1"]):
+        ax_mae.text(val + d["mae1"].max() * 0.015,
+                    bar.get_y() + bar.get_height() / 2,
+                    f"{val:.3f}", va="center", ha="left",
+                    fontsize=11, color="#222222")
+    ax_mae.set_xlabel(t["cmp_mae_xlabel"], fontweight="bold", labelpad=8)
+    ax_mae.set_title(t["cmp_mae_title"], fontweight="bold", pad=12, fontsize=13)
+    ax_mae.set_xlim(0, d["mae1"].max() * 1.22)
+    ax_mae.grid(axis="x", alpha=0.25, linestyle="--", linewidth=0.7)
+    ax_mae.set_axisbelow(True)
+    ax_mae.spines[["top", "right"]].set_visible(False)
+    ax_mae.tick_params(axis="both", length=0, pad=6)
+
+    # ---------- (b) Head 2: macro-F1 ----------
+    d = df.sort_values("f1_macro", ascending=False).reset_index(drop=True)
+    norm = (d["f1_macro"] - d["f1_macro"].min()) / (d["f1_macro"].max() - d["f1_macro"].min() + 1e-9)
+    colors = plt.cm.Greens(0.35 + 0.55 * norm)
+    bars = ax_f1.barh(d["label"], d["f1_macro"], color=colors,
+                      edgecolor="#222222", linewidth=0.6, height=0.65)
+    for bar, val in zip(bars, d["f1_macro"]):
+        ax_f1.text(val + 0.012, bar.get_y() + bar.get_height() / 2,
+                   f"{val:.3f}", va="center", ha="left",
+                   fontsize=11, color="#222222")
+    ax_f1.set_xlabel(t["cmp_f1_xlabel"], fontweight="bold", labelpad=8)
+    ax_f1.set_title(t["cmp_f1_title"], fontweight="bold", pad=12, fontsize=13)
+    ax_f1.set_xlim(0, 1.0)
+    ax_f1.grid(axis="x", alpha=0.25, linestyle="--", linewidth=0.7)
+    ax_f1.set_axisbelow(True)
+    ax_f1.spines[["top", "right"]].set_visible(False)
+    ax_f1.tick_params(axis="both", length=0, pad=6)
+
+    fig.suptitle(t["cmp_suptitle"], fontsize=16, fontweight="bold", y=0.98)
+    plt.savefig(
+        Path(config["models"][config["default_model"]]["eval_dir"]).parent
+        / f"models_comparison_{'ru' if lang == 'ru' else 'en'}.png",
+        dpi=300, bbox_inches="tight", facecolor="white",
+    )
+    plt.show()
+    print(f"Saved: models_comparison_{'ru' if lang == 'ru' else 'en'}.png")
+
+
+def plot_models_f1_trend(config, reference_key: str | None = None,
+                         mode: str = "cumulative"):
+    """
+    Plot F1 across all classes for every model on a common class ordering.
+
+    Classes are ordered by the reference model's F1 (ascending: worst → best).
+    Two modes:
+      - "cumulative": running mean F1 over the first k classes (smooth growth curve)
+      - "raw":        per-class F1 on the common ordering (noisy, shows dips)
+
+    :param config: Report config.
+    :param reference_key: Model key used to define class order. Defaults to default_model.
+    :param mode: "cumulative" or "raw".
+    """
+    lang = config["default_lang"]
+    t = config["texts"][lang]
+    reference_key = reference_key or config["default_model"]
+
+    short_names = {
+        "i3d_f32": "I3D-8x8-R50 (f32)",
+        "slowfast_f32": "SlowFast-8x8-R50 (f32)",
+        "x3dm_f32": "X3D-M (f32)",
+        "timesformer_f32": "TimeSformer (f32)",
+        "timesformer_f16": "TimeSformer (f16)",
+        "videomae_f16": "VideoMAE (f16)",
+    }
+
+    per_model = {}
+    for key, mcfg in config["models"].items():
+        eval_dir = Path(mcfg["eval_dir"])
+        m = pd.read_csv(eval_dir / "per_class_metrics.csv")
+        m = m[["class_name", "f1_score"]].drop_duplicates("class_name")
+        per_model[key] = m.set_index("class_name")["f1_score"]
+
+    ref = per_model[reference_key].sort_values(ascending=True)
+    class_order = ref.index.tolist()
+
+    aligned = pd.DataFrame({
+        key: s.reindex(class_order) for key, s in per_model.items()
+    })
+
+    x = np.arange(len(class_order))
+
+    # ---- compute all plotted series first (to set tight ylim) ----
+    series = {}
+    for key in config["models"]:
+        y = aligned[key].values.astype(float)
+        if mode == "cumulative":
+            y_plot = np.full_like(y, np.nan, dtype=float)
+            valid = ~np.isnan(y)
+            if valid.any():
+                cum = np.cumsum(np.where(valid, y, 0.0))
+                cnt = np.cumsum(valid.astype(int))
+                y_plot[valid] = cum[valid] / cnt[valid]
+            series[key] = y_plot
+        else:
+            series[key] = y
+
+    all_vals = np.concatenate([v[~np.isnan(v)] for v in series.values()])
+    y_min, y_max = all_vals.min(), all_vals.max()
+    pad = (y_max - y_min) * 0.10 if y_max > y_min else 0.02
+    y_lo, y_hi = y_min - pad, y_max + pad
+
+    # ---- styling: narrower X, taller Y ----
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.size"] = 12
+    plt.rcParams["axes.linewidth"] = 0.8
+    plt.rcParams["axes.edgecolor"] = "#333333"
+
+    fig, ax = plt.subplots(figsize=(9, 9))   # ← was (14, 6.5)
+    fig.patch.set_facecolor("white")
+    fig.subplots_adjust(left=0.11, right=0.97, top=0.90, bottom=0.10)
+
+    palette = {
+        "i3d_f32": "#1f77b4",
+        "slowfast_f32": "#ff7f0e",
+        "x3dm_f32": "#2ca02c",
+        "timesformer_f32": "#d62728",
+        "timesformer_f16": "#9467bd",
+        "videomae_f16": "#8c564b",
+    }
+    markers = {
+        "i3d_f32": "o", "slowfast_f32": "s", "x3dm_f32": "^",
+        "timesformer_f32": "D", "timesformer_f16": "v",
+        "videomae_f16": "P",
+    }
+
+    for key in config["models"]:
+        y_plot = series[key]
+        color = palette.get(key, None)
+        label = short_names.get(key, config["models"][key]["name"])
+
+        if mode == "cumulative":
+            ax.plot(x, y_plot, linewidth=2.2, color=color,
+                    marker=markers.get(key, "o"), markersize=4,
+                    markevery=max(1, len(x) // 10),
+                    label=label)
+        else:
+            ax.plot(x, y_plot, linewidth=1.4, color=color,
+                    marker=markers.get(key, "o"), markersize=2.8,
+                    markevery=max(1, len(x) // 14),
+                    alpha=0.9, label=label)
+
+    # threshold lines only if they fall inside the visible range
+    for lvl, col in ((0.5, "red"), (0.8, "green")):
+        if y_lo <= lvl <= y_hi:
+            ax.axhline(lvl, color=col, linestyle="--", alpha=0.55, linewidth=1.0)
+            ax.text(len(x) - 0.5, lvl + (y_hi - y_lo) * 0.01,
+                    f"F1 = {lvl}", color=col, fontsize=9,
+                    ha="right", va="bottom")
+
+    ref_name = short_names.get(reference_key, reference_key)
+    ax.set_xlabel(t["trend_xlabel"].format(ref=ref_name),
+                  fontweight="bold", labelpad=8)
+    ax.set_ylabel(
+        t["trend_ylabel_cum"] if mode == "cumulative" else t["trend_ylabel_raw"],
+        fontweight="bold", labelpad=8,
+    )
+    title_tpl = t["trend_title_cum"] if mode == "cumulative" else t["trend_title_raw"]
+    ax.set_title(title_tpl.format(n=len(class_order)), fontweight="bold",
+                 fontsize=13, pad=12)
+
+    # ---- compressed X: fewer ticks, no class names ----
+    ax.set_xlim(0, len(x) - 1)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=8, integer=True))
+    ax.set_ylim(y_lo, y_hi)   # ← tight, data-driven
+
+    ax.grid(True, alpha=0.25, linestyle="--", linewidth=0.7)
+    ax.set_axisbelow(True)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.tick_params(axis="both", length=0, pad=6)
+    ax.legend(loc="lower right", fontsize=10, frameon=False, ncol=1)
+
+    fig.suptitle(t["trend_suptitle"], fontsize=16, fontweight="bold", y=0.97)
+
+    suffix = "ru" if lang == "ru" else "en"
+    out_path = (Path(config["models"][config["default_model"]]["eval_dir"]).parent
+                / f"models_f1_trend_{mode}_{suffix}.png")
+    plt.savefig(out_path, dpi=300, bbox_inches="tight", facecolor="white")
+    plt.show()
+    print(f"Saved: {out_path}")
+
+
 if __name__ == "__main__":
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
-    plot_model_summary(config)
-    plot_sorted_f1_with_extremes(config)
-    plot_radar_by_category(config)
+    # plot_model_summary(config)
+    # plot_sorted_f1_with_extremes(config)
+    # plot_radar_by_category(config)
+    # plot_models_comparison(config)
+    plot_models_f1_trend(config, reference_key="timesformer_f32", mode="cumulative")
+    plot_models_f1_trend(config, reference_key="timesformer_f32", mode="raw")

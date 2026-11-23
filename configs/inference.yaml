@@ -5,9 +5,9 @@ preprocessing:
   reid_path: null
   detector_path: "models/detector/yolo/yolov8m.pt"
   min_track_length: 10
-  group_method: "hdbscan"  # spectral, dbscan, hdbscan
-  n_top: 2
-  n_random: 1
+  group_method: "dbscan"  # spectral, dbscan, hdbscan
+  n_top: 3
+  n_random: 0
   global_first: True
 
 # Postprocessing configuration
@@ -18,7 +18,7 @@ postprocessing:
 # Model configuration
 model:
   id2label_path: "data/dataset/id2label.json"
-  preset: "x3dm_f32_mh"
+  preset: "videomae_f16_mh"
   available_presets:
     - i3d_f32_mh
     - slowfast_f32_mh

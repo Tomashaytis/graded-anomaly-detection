@@ -48,7 +48,7 @@ class GroupDetector:
         :param pair_sim_threshold: For n == 2, similarity >= this -> one group.
         :param eigengap_min: For n >= 3, gap below this -> one group (spectral only).
         :param max_k: Upper bound for auto-k (None = up to n - 1, spectral only).
-        :param method: Cluster medhod ('spectral', 'dbscan' or 'hdbscan').
+        :param method: Cluster method ('spectral', 'dbscan' or 'hdbscan').
         :param dbscan_eps: DBSCAN eps on distance matrix (D = 1 - A).
         :param dbscan_min_samples: DBSCAN min_samples.
         :param hdbscan_min_cluster_size: HDBSCAN min cluster size.
@@ -147,6 +147,10 @@ class GroupDetector:
         :param matrix_a: Matrix with features.
         :return: Labels.
         """
+        n = matrix_a.shape[0]
+        if n <= 1:
+            return np.zeros(n, dtype=int)
+
         d = 1.0 - matrix_a
         np.fill_diagonal(d, 0.0)
         d = np.clip(d, 0.0, 1.0)
@@ -185,7 +189,7 @@ class GroupDetector:
         """
         Return centroids for track bboxes.
 
-        :param tracks: Tracks.
+        :param track: Track.
         :return: Track centroids.
         """
         f = track[:, 0]
@@ -242,6 +246,10 @@ class GroupDetector:
             w = pts[:, 3] - pts[:, 1]
             h = pts[:, 4] - pts[:, 2]
             diagonals.append(np.hypot(w, h))
+
+        if not diagonals:
+            return [], np.zeros((0, 0), dtype=np.float32)
+
         bbox_scale = max(float(np.mean(np.concatenate(diagonals))), 1.0)
 
         tids = list(tracks.keys())
