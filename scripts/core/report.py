@@ -333,8 +333,8 @@ def plot_models_comparison(config):
     t = config["texts"][lang]
 
     short_names = {
-        "i3d_f32": "I3D-8x8-R50",
-        "slowfast_f32": "SlowFast-8x8-R50",
+        "i3d_f32": "I3D",
+        "slowfast_f32": "SlowFast",
         "x3dm_f32": "X3D-M",
         "timesformer_f16": "TimeSformer",
         "videomae_f16": "VideoMAE",
@@ -364,7 +364,7 @@ def plot_models_comparison(config):
         gridspec_kw={"width_ratios": [1.0, 1.0]},
     )
     fig.patch.set_facecolor("white")
-    fig.subplots_adjust(wspace=0.55, left=0.11, right=0.96, top=0.86, bottom=0.16)
+    fig.subplots_adjust(wspace=0.35, left=0.11, right=0.96, top=0.86, bottom=0.16)
     ax_mae, ax_f1 = axes
 
     # ---------- (a) Head 1: MAE ----------
@@ -557,9 +557,9 @@ if __name__ == "__main__":
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
-    plot_model_summary(config)
+    # plot_model_summary(config)
     # plot_sorted_f1_with_extremes(config)
     # plot_radar_by_category(config)
-    # plot_models_comparison(config)
+    plot_models_comparison(config)
     # plot_models_f1_trend(config, reference_key="timesformer_f16", mode="cumulative")
     # plot_models_f1_trend(config, reference_key="timesformer_f16", mode="raw")

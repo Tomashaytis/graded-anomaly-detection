@@ -1,8 +1,8 @@
 """
 python -m scripts.helpers.grid_search_persistence `
-  --normal data/test_system/slowfast/normal/results.json `
-  --anomaly data/test_system/slowfast/anomalous/results.json `
-  --max-far 0.05
+  --normal data/test_system/results/slowfast/normal.json `
+  --anomaly data/test_system/results/slowfast/anomalous.json `
+  --max-far 0.15
 """
 
 import sys
